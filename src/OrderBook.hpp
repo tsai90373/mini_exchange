@@ -6,8 +6,8 @@
 #include"Order.hpp"
 
 
-using Bids = std::map<Price, std::queue<Order>, std::greater<Price>>;
-using Asks = std::map<Price, std::queue<Order>, std::less<Price>>;
+using Bids = std::map<Price, std::queue<Order*>, std::greater<Price>>;
+using Asks = std::map<Price, std::queue<Order*>, std::less<Price>>;
 
 
 class OrderBook {

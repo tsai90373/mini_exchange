@@ -1,6 +1,5 @@
 # Mini Exchange
 
-## Function
 **Stage1** 
 1. Provide Order Matching
     - OrderBook/Order data structure
@@ -9,7 +8,14 @@
         - Log all the trading records
 
 
-**Stage2**
-    - Market Order
-    - send report back to client
-    - FIX log
+
+**TODO:**
+- Symbol List in Exchange
+- Report of trade
+- Different Data Structure
+- Market Order
+- send report back to client
+- FIX
+- Client / Server
+- Multithreading
+- Benchmark
