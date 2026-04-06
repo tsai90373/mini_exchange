@@ -23,17 +23,17 @@ int main() {
     Order sell1(2, sym, Side::Sell, 100, 10);
     exchange.SendNew(sell1);
     assert(book->bids_.empty());
-    assert(buy1.leaveQty_ == 0);
-    assert(sell1.leaveQty_ == 0);
+    assert(exchange.tradeLogs_.size() == 1);
+    assert(exchange.tradeLogs_[0].qty_ == 10);
+ 
 
     // 情況3: partial fill
     Order buy2(3, sym, Side::Buy, 100, 5);
     Order sell2(4, sym, Side::Sell, 100, 10);
     exchange.SendNew(buy2);
     exchange.SendNew(sell2);
-    assert(buy2.leaveQty_ == 0);
-    assert(sell2.leaveQty_ == 5);  // sell 剩 5
     assert(book->asks_[100].size() == 1);  // 剩餘掛到 asks
+    assert(exchange.tradeLogs_[1].qty_ == 5);
 
     return 0;
 }

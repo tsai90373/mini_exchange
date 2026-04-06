@@ -20,3 +20,9 @@ public:
     Qty leaveQty_;
     Qty filledQty_;
 };
+
+struct ChgRequest {
+    OrdId ordId_;
+    Price newPrice_; // 0表示不改價
+    Qty newLeaveQty;
+};
