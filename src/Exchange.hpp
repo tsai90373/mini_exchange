@@ -87,6 +87,7 @@ public:
     // Books should be private, temparirly move to public for test
     OrderBooks books_;
     std::vector<TradeLog> tradeLogs_;
+    std::vector<Symbol> symbs_;
 
     bool SendNew(Order&);
     bool SendChg(ChgRequest&);
