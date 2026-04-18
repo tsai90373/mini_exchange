@@ -28,6 +28,9 @@ enum class Market {
 
 class Symbol {
 public:
+    bool operator<(const Symbol& other) const {
+        return id_ < other.id_;
+    }
     SymbId id_;
     Market mkt_;
     Price UpLmt_;

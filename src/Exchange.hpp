@@ -5,6 +5,8 @@
 #include<vector>
 #include"Types.hpp"
 #include"OrderBook.hpp"
+#include"Order.hpp"
+#include<memory>
 
 
 using OrderBooks = std::map<Symbol, OrderBook*>;
@@ -26,7 +28,6 @@ private:
            現在妥協的作法是先把 leaveQty 改成 0 但是這樣可能導致大量的殭屍委託卡在中間
     */
     std::unordered_map<OrdId, std::unique_ptr<Order>> orderPool_;
-
 
     template<typename BookSide>
     Qty match(BookSide& counterside, Qty req_qty, Price req_pri, bool is_buy) {
