@@ -1,6 +1,7 @@
 #pragma once
 #include<cstdint>
 #include<array>
+#include<vector>
 
 
 using OrdId = uint32_t;
@@ -54,10 +55,13 @@ struct OrderNewMsg {
 struct ExecReport {
     uint32_t size;
     uint32_t ordId;
-    char     execType;  // 'N'ew 'F'ill 'P'artial 'R'ejected 'C'anceled
     uint64_t price;     // 成交價（N/R 的時候沒意義）
     uint32_t qty;       // 成交量
     uint32_t leaveQty;
+    Side     side_; 
+    char     execType;  // 'N'ew 'F'ill 'P'artial 'R'ejected 'C'anceled
     char     rejectReason[16];  // 拒絕原因
 };
 #pragma pack(pop)
+
+using ReportList = std::vector<ExecReport>;

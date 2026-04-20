@@ -90,8 +90,17 @@ public:
     // Books should be private, temparirly move to public for test
     OrderBooks books_;
     std::vector<TradeLog> tradeLogs_;
+    // Q: 先用最間單的方式，如果有新單成功，就加入新單回報，如果有成交，就送兩個回報
+    std::vector<ExecReport> reports_;
 
-    bool SendNew(Order&);
+    /*
+        要做回報需要什麼？
+        其實好想只需要傳入 Order
+        如果 
+    */
+    ExecReport GenReport(Order&, char);
+
+    ReportList SendNew(Order&);
     bool SendChg(ChgRequest&);
     bool SendDel(OrdId);
 

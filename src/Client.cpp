@@ -45,5 +45,10 @@ bool Client::SendNew(Order& ord) {
     // msg.price  = ord.price_;
     // msg.qty    = ord.iniQty_;
     write(fd_, &ord, sizeof(ord));
+
+    ExecReport rpt;
+    read(fd_, &rpt, sizeof(rpt));
+    printf("回報: execType=%c ordId=%u qty=%u\n", rpt.execType, rpt.ordId, rpt.qty);
+
     return true;
 }

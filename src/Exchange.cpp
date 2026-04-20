@@ -4,80 +4,91 @@
 #include<memory>
 
 
+
 // TODO: 是否要 const ord?
-bool Exchange::SendNew(Order& ord) {
+ReportList Exchange::SendNew(Order& ord) {
     // 先根據 symbid 查 symb
     auto symbPos = symbMap_.find(ord.symbId_);
     if (symbPos == symbMap_.end()) {
-        return false;
+        // auto ptr = std::make_unique<OrderBook>;
+        // books_[ord.symbId_] = ptr;
+        // return ReportList{};
     }
     
     // TODO: 可能會有風險，應該用 find -> Q: 原本這裡有風險，但是現在已經確定symb存在所以book存在
-    if (auto book = books_[ord.symbId_]) {
-        const auto log_begin = tradeLogs_.size();
-        Price req_pri = ord.price_;
-        Qty req_qty = ord.iniQty_;
+    if (books_.find(ord.symbId_) == books_.end()) {
+        books_[ord.symbId_] = new OrderBook();
+    }
+    auto book = books_[ord.symbId_];
+    const auto log_begin = tradeLogs_.size();
+    Price req_pri = ord.price_;
+    Qty req_qty = ord.iniQty_;
 
-        bool is_buy = ord.side_ == Side::Buy; 
-        // 新單買單
-        if (is_buy) {
-            if (book->ask_1 > 0 && req_pri >= book->ask_1) 
-                req_qty = match<Asks>(book->asks_, req_qty, req_pri, is_buy);
+    bool is_buy = ord.side_ == Side::Buy; 
+    // 新單買單
+    if (is_buy) {
+        if (book->ask_1 > 0 && req_pri >= book->ask_1) 
+            req_qty = match<Asks>(book->asks_, req_qty, req_pri, is_buy);
+        // T: 新單成功後，應該在這邊先做一個新單成功的回報（用原始委託數量）
+        reports_.push_back(GenReport(ord, 'N'));
 
-            ord.leaveQty_ = req_qty;
-            ord.filledQty_ = ord.iniQty_ - ord.leaveQty_;
-            // 更新 ask1
-            if (book->asks_.empty()) 
-                book->ask_1 = 0;
-            else 
-                book->ask_1 = book->asks_.begin()->first;
-
-            // 有剩餘量: 掛到 bids 上面
-            if (req_qty) {
-                auto newOrd = std::make_unique<Order>(ord);
-                Order* ptr = newOrd.get();
-                orderPool_.insert_or_assign(ord.ordId_, std::move(newOrd));
-                book->bids_[req_pri].push(ptr);
-                // 既然可以直接成交，代表一定是最高價
-                book->bid_1 = req_pri;
-            }
-            for (size_t i = log_begin; i < tradeLogs_.size(); ++i)
-                tradeLogs_[i].aggressiveOrdId_ = ord.ordId_;
-            return true;
-        }
-        // 新單賣單
-        if (book->bid_1 > 0 && req_pri <= book->bid_1)
-            req_qty = match<Bids>(book->bids_, req_qty, req_pri, is_buy);
         ord.leaveQty_ = req_qty;
         ord.filledQty_ = ord.iniQty_ - ord.leaveQty_;
 
-        // 更新 bid_1
-        if (book->bids_.empty()) 
-            book->bid_1 = 0;
+        // T: 如果 filledQty > 0，再加上成交回報
+        reports_.push_back(GenReport(ord, 'F'));
+        // 更新 ask1
+        if (book->asks_.empty()) 
+            book->ask_1 = 0;
         else 
-            book->bid_1 = book->bids_.begin()->first;
+            book->ask_1 = book->asks_.begin()->first;
 
-        // 有剩餘量: 掛到 asks 上面
+        // 有剩餘量: 掛到 bids 上面
         if (req_qty) {
-            /*  
-                unordered_map 的 [] 必須確定 default constructor 存在
-                orderPool_[ord.ordId_] -> 若 value 不存在，會先 call default constructor 再 assign
-                要告訴 compiler 這個 key 一定存在 -> 用 at() 
-            */
-            auto newOrd = std::make_unique<Order>(ord);    // unique pointer
-            Order* ptr = newOrd.get();                     // raw pointer
+            auto newOrd = std::make_unique<Order>(ord);
+            Order* ptr = newOrd.get();
             orderPool_.insert_or_assign(ord.ordId_, std::move(newOrd));
-            book->asks_[req_pri].push(ptr);
-            // 既然可以直接成交，代表一定是最低價
-            book->ask_1 = req_pri;
+            book->bids_[req_pri].push(ptr);
+            // 既然可以直接成交，代表一定是最高價
+            book->bid_1 = req_pri;
         }
         for (size_t i = log_begin; i < tradeLogs_.size(); ++i)
             tradeLogs_[i].aggressiveOrdId_ = ord.ordId_;
-        
-        return true;
+        return reports_;
     }
+    // 新單賣單
+    if (book->bid_1 > 0 && req_pri <= book->bid_1)
+        req_qty = match<Bids>(book->bids_, req_qty, req_pri, is_buy);
+
+    reports_.push_back(GenReport(ord, 'N'));
+    ord.leaveQty_ = req_qty;
+    ord.filledQty_ = ord.iniQty_ - ord.leaveQty_;
+    reports_.push_back(GenReport(ord, 'F'));
+
+    // 更新 bid_1
+    if (book->bids_.empty()) 
+        book->bid_1 = 0;
+    else 
+        book->bid_1 = book->bids_.begin()->first;
+
+    // 有剩餘量: 掛到 asks 上面
+    if (req_qty) {
+        /*  
+            unordered_map 的 [] 必須確定 default constructor 存在
+            orderPool_[ord.ordId_] -> 若 value 不存在，會先 call default constructor 再 assign
+            要告訴 compiler 這個 key 一定存在 -> 用 at() 
+        */
+        auto newOrd = std::make_unique<Order>(ord);    // unique pointer
+        Order* ptr = newOrd.get();                     // raw pointer
+        orderPool_.insert_or_assign(ord.ordId_, std::move(newOrd));
+        book->asks_[req_pri].push(ptr);
+        // 既然可以直接成交，代表一定是最低價
+        book->ask_1 = req_pri;
+    }
+    for (size_t i = log_begin; i < tradeLogs_.size(); ++i)
+        tradeLogs_[i].aggressiveOrdId_ = ord.ordId_;
     
-    return false;
+    return reports_;
 }
 
 /*
@@ -128,4 +139,35 @@ bool Exchange::SendDel(OrdId ordId) {
 
     orig_ord.leaveQty_ = 0;
     return true;
+}
+
+ExecReport Exchange::GenReport(Order& ord, char exType) {
+
+    ExecReport rpt;
+    // 新單回報
+    if (exType == 'N') {
+        // 回傳新單請求的價量
+        rpt.execType = 'N';
+        rpt.size = sizeof(ExecReport);
+        rpt.ordId = ord.ordId_;
+        rpt.price = ord.price_;
+        rpt.qty = ord.iniQty_;
+        rpt.side_ = ord.side_;
+        return rpt;
+    }
+    // 成交回報
+    else if (exType == 'F') {
+        rpt.execType = 'F';
+        rpt.size = sizeof(ExecReport);
+        rpt.ordId = ord.ordId_;
+        rpt.price = ord.price_;
+        // 成交量 & 剩餘量
+        rpt.qty = ord.filledQty_;
+        rpt.leaveQty = ord.leaveQty_;
+        rpt.side_ = ord.side_;
+        return rpt;
+    }
+
+    return rpt;
+
 }
