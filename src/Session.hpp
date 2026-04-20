@@ -5,7 +5,7 @@
 #include<vector>
 
 
-enum class RevState {
+enum class RecvState {
     WaitingHeader,
     WaitingBody
 };
@@ -23,6 +23,6 @@ public:
     bool OnRecvData(char* buf, int n);
     int totalSize_;
 
-    RevState recvSt_ = RevState::WaitingHeader;
+    RecvState recvSt_ = RecvState::WaitingHeader;
 
 };

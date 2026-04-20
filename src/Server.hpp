@@ -31,7 +31,8 @@ class Server {
 private:
     uint32_t port_;
     Exchange& exchange_;
-    std::unordered_map<int, std::unique_ptr<Session>> sesList_;
+    // Q: 這種某個某物件的容器，標準就是要叫 物件s ? sessions_?
+    std::unordered_map<int, std::unique_ptr<Session>> sessions_;
 
 public:
     Server(uint32_t port, Exchange& exchange) : port_(port), exchange_(exchange) {};

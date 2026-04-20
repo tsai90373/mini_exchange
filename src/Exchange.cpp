@@ -6,7 +6,7 @@
 
 
 // TODO: 是否要 const ord?
-ReportList Exchange::SendNew(Order& ord) {
+ReportList Exchange::sendNew(Order& ord) {
     // 先根據 symbid 查 symb
     auto symbPos = symbMap_.find(ord.symbId_);
     if (symbPos == symbMap_.end()) {
@@ -30,13 +30,13 @@ ReportList Exchange::SendNew(Order& ord) {
         if (book->ask_1 > 0 && req_pri >= book->ask_1) 
             req_qty = match<Asks>(book->asks_, req_qty, req_pri, is_buy);
         // T: 新單成功後，應該在這邊先做一個新單成功的回報（用原始委託數量）
-        reports_.push_back(GenReport(ord, 'N'));
+        reports_.push_back(genReport(ord, 'N'));
 
         ord.leaveQty_ = req_qty;
         ord.filledQty_ = ord.iniQty_ - ord.leaveQty_;
 
         // T: 如果 filledQty > 0，再加上成交回報
-        reports_.push_back(GenReport(ord, 'F'));
+        reports_.push_back(genReport(ord, 'F'));
         // 更新 ask1
         if (book->asks_.empty()) 
             book->ask_1 = 0;
@@ -60,10 +60,10 @@ ReportList Exchange::SendNew(Order& ord) {
     if (book->bid_1 > 0 && req_pri <= book->bid_1)
         req_qty = match<Bids>(book->bids_, req_qty, req_pri, is_buy);
 
-    reports_.push_back(GenReport(ord, 'N'));
+    reports_.push_back(genReport(ord, 'N'));
     ord.leaveQty_ = req_qty;
     ord.filledQty_ = ord.iniQty_ - ord.leaveQty_;
-    reports_.push_back(GenReport(ord, 'F'));
+    reports_.push_back(genReport(ord, 'F'));
 
     // 更新 bid_1
     if (book->bids_.empty()) 
@@ -102,7 +102,7 @@ ReportList Exchange::SendNew(Order& ord) {
         帶入量 （需檢查是否 < 原始委託量）
         帶入價 or 帶入價量 (只要改價格其實就是重新排隊了，直接 call 新單流程)
 */
-bool Exchange::SendChg(ChgRequest& req) {
+bool Exchange::sendChg(ChgRequest& req) {
     // TODO: 不確定是否需要一個新的資料結構，目前需要的欄位都有姑且先使用
     Price req_pri = req.newPrice_;
     Qty leaveQty = req.newLeaveQty;
@@ -124,14 +124,14 @@ bool Exchange::SendChg(ChgRequest& req) {
         Order newOrd = orig_ord;
         newOrd.iniQty_ = req.newLeaveQty;
         newOrd.price_ = req.newPrice_;
-        SendNew(newOrd);
+        sendNew(newOrd);
         return true;
     }
     // 如果是只有改量
     orig_ord.leaveQty_ = req.newLeaveQty;
     return true;
 }
-bool Exchange::SendDel(OrdId ordId) {
+bool Exchange::sendDel(OrdId ordId) {
     auto it = orderPool_.find(ordId);
     if (it == orderPool_.end())
         return false;
@@ -141,7 +141,7 @@ bool Exchange::SendDel(OrdId ordId) {
     return true;
 }
 
-ExecReport Exchange::GenReport(Order& ord, char exType) {
+ExecReport Exchange::genReport(Order& ord, char exType) {
 
     ExecReport rpt;
     // 新單回報

@@ -98,10 +98,10 @@ public:
         其實好想只需要傳入 Order
         如果 
     */
-    ExecReport GenReport(Order&, char);
+    ExecReport genReport(Order&, char);
 
-    ReportList SendNew(Order&);
-    bool SendChg(ChgRequest&);
-    bool SendDel(OrdId);
+    ReportList sendNew(Order&);
+    bool sendChg(ChgRequest&);
+    bool sendDel(OrdId);
 
 };

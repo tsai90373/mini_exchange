@@ -10,6 +10,9 @@
 
 bool Server::run() {
     int listen_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (listen_fd < 0)
+        perror("socket");
+
 
     sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
@@ -18,10 +21,12 @@ bool Server::run() {
     addr.sin_addr.s_addr = INADDR_ANY;
 
     int opt = 1;
-    setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-    bind(listen_fd, (sockaddr*)&addr, sizeof(addr));
-
-    listen(listen_fd, SOMAXCONN);
+    if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) 
+        perror("setsockopt");
+    if (bind(listen_fd, (sockaddr*)&addr, sizeof(addr)) < 0)
+        perror("bind");
+    if (listen(listen_fd, SOMAXCONN) < 0)
+        perror("listen");
 
     // 這啥？epoll也是fd
     int epfd = epoll_create1(0);
@@ -41,20 +46,23 @@ bool Server::run() {
     epoll_event ev;
     ev.events = EPOLLIN;
     ev.data.fd = listen_fd;
-    epoll_ctl(epfd, EPOLL_CTL_ADD, listen_fd, &ev);
+    if (epoll_ctl(epfd, EPOLL_CTL_ADD, listen_fd, &ev) < 0) 
+        perror("epoll_ctl");
 
     epoll_event events[64];
     while (true) {
         printf("等待事件...\n");
         // 1. listen for both new connection and new data
         int n = epoll_wait(epfd, events, 64, -1);
+        if (n < 0)
+            perror("epoll wait");
         for (int i = 0; i < n; i++) {
             int fd = events[i].data.fd;
             if (fd == listen_fd) {
                 // new connection
                 int client_fd = accept(listen_fd, nullptr, nullptr);
                 printf("新連線: client_fd = %d\n", client_fd);
-                sesList_[client_fd] = std::make_unique<Session>(client_fd, exchange_);
+                sessions_[client_fd] = std::make_unique<Session>(client_fd, exchange_);
 
                 /* 
                     TODO: Factory
@@ -67,7 +75,8 @@ bool Server::run() {
                 epoll_event ev;
                 ev.events = EPOLLIN;
                 ev.data.fd = client_fd;
-                epoll_ctl(epfd, EPOLL_CTL_ADD, client_fd, &ev);
+                if (epoll_ctl(epfd, EPOLL_CTL_ADD, client_fd, &ev) < 0)
+                    perror("epoll ctl");
 
             }
             else {
@@ -77,14 +86,15 @@ bool Server::run() {
 
                 // client 斷線
                 if (n == 0) {
-                    epoll_ctl(epfd, EPOLL_CTL_DEL, fd, nullptr);
-                    sesList_.erase(fd);
+                    if (epoll_ctl(epfd, EPOLL_CTL_DEL, fd, nullptr) < 0)
+                        perror("epoll ctl");
+                    sessions_.erase(fd);
                     close(fd);
                 }
                 else {
                     std::cout << "n=" << n << std::endl;
                     buf[n] = '\0';
-                    sesList_[fd]->OnRecvData(buf, n);
+                    sessions_[fd]->OnRecvData(buf, n);
                     printf("收到： %s\n", buf);
                 }
             }

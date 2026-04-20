@@ -7,7 +7,7 @@ class Client {
 private:
     // connection param
     struct Config {
-        std::string Ip_;
+        std::string ip_;
         uint32_t port_;   
     };
     Config cfg_;
@@ -16,7 +16,7 @@ public:
     // Send() needs fd
     int fd_;
     void run();
-    bool SendNew(Order&);
-    bool SendChg(ChgRequest&);
-    bool SendDel(OrdId);
+    bool sendNew(Order&);
+    bool sendChg(ChgRequest&);
+    bool sendDel(OrdId);
 };
