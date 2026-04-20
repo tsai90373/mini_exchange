@@ -1,4 +1,8 @@
+#pragma once
 #include<cstdint>
+#include<unordered_map>
+#include"Session.hpp"
+#include"Exchange.hpp"
 // An Exchange Server
 /* 
 my thought on creating a class
@@ -26,9 +30,11 @@ device is a wrapper of socket, and it owns sessions?
 class Server {
 private:
     uint32_t port_;
+    Exchange& exchange_;
+    std::unordered_map<int, std::unique_ptr<Session>> sesList_;
 
 public:
-    Server(uint32_t port) : port_(port) {};
+    Server(uint32_t port, Exchange& exchange) : port_(port), exchange_(exchange) {};
     bool run();
 
 /* 

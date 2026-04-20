@@ -6,8 +6,14 @@
 
 // TODO: 是否要 const ord?
 bool Exchange::SendNew(Order& ord) {
-    // TODO: 可能會有風險，應該用 find
-    if (auto book = books_[ord.symb_]) {
+    // 先根據 symbid 查 symb
+    auto symbPos = symbMap_.find(ord.symbId_);
+    if (symbPos == symbMap_.end()) {
+        return false;
+    }
+    
+    // TODO: 可能會有風險，應該用 find -> Q: 原本這裡有風險，但是現在已經確定symb存在所以book存在
+    if (auto book = books_[ord.symbId_]) {
         const auto log_begin = tradeLogs_.size();
         Price req_pri = ord.price_;
         Qty req_qty = ord.iniQty_;

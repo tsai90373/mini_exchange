@@ -6,24 +6,24 @@
 #include <fcntl.h>
 #include <cstring>
 #include <cstdio>
-
+#include <iostream>
 
 bool Server::run() {
-    // Q: what is 0?
     int listen_fd = socket(AF_INET, SOCK_STREAM, 0);
 
     sockaddr_in addr;
-    // make sure the data is cleaned
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port_);
     addr.sin_addr.s_addr = INADDR_ANY;
 
+    int opt = 1;
+    setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
     bind(listen_fd, (sockaddr*)&addr, sizeof(addr));
 
     listen(listen_fd, SOMAXCONN);
 
-    // Q: 這啥？epoll也是fd?
+    // 這啥？epoll也是fd
     int epfd = epoll_create1(0);
 
     /* 
@@ -54,37 +54,39 @@ bool Server::run() {
                 // new connection
                 int client_fd = accept(listen_fd, nullptr, nullptr);
                 printf("新連線: client_fd = %d\n", client_fd);
+                sesList_[client_fd] = std::make_unique<Session>(client_fd, exchange_);
+
+                /* 
+                    TODO: Factory
+                    new connection -> new session
+                    how to create a new session?
+                    maybe use a session factory? session factory is derived from a base factory class?
+                    and this should be a template class such as Factory<Session>, Factory<Order> etc.
+                */
+
                 epoll_event ev;
                 ev.events = EPOLLIN;
                 ev.data.fd = client_fd;
-                // Q: 重複使用變數名稱？
                 epoll_ctl(epfd, EPOLL_CTL_ADD, client_fd, &ev);
 
             }
             else {
-
                 // connected
-                // int total_bytes = parse_header();
                 char buf[1024];
-
-                // 代表有資料，需要先知道資料有多少bytes，並且要拿到確認大小的bytes才算結束
-                // while (total_bytes > 0) {
                 int n = read(fd, buf, sizeof(buf));
 
                 // client 斷線
                 if (n == 0) {
                     epoll_ctl(epfd, EPOLL_CTL_DEL, fd, nullptr);
+                    sesList_.erase(fd);
                     close(fd);
                 }
                 else {
+                    std::cout << "n=" << n << std::endl;
                     buf[n] = '\0';
+                    sesList_[fd]->OnRecvData(buf, n);
                     printf("收到： %s\n", buf);
                 }
-
-                    // memcpy(fd.buffer, buf, n);
-                    // total_bytes -= n;
-                    // memset(buf, 0, sizeof(buf));
-                // }
             }
         }
         

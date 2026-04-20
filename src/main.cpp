@@ -1,14 +1,23 @@
 #include<cassert>
+#include<string>
 #include"Exchange.hpp"
 #include"Types.hpp"
+#include"Client.hpp"
 #include"Server.hpp"
 
-int main() {
+int main(int argc, char* argv[]) {
 
-    Exchange exchange;
 
-    Server* svr = new Server{8080};
-    svr->run();
+
+    if (argc > 1 && std::string(argv[1]) == "client") {
+        Client client({"127.0.0.1", 8080});
+        client.run();
+    }
+    else {
+        Exchange exchange;
+        Server* svr = new Server{8080, exchange};
+        svr->run();
+    }
 
 
 

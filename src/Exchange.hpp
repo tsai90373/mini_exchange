@@ -9,7 +9,7 @@
 #include<memory>
 
 
-using OrderBooks = std::map<Symbol, OrderBook*>;
+using OrderBooks = std::map<SymbId, OrderBook*>;
 
 class Exchange {
 private:
@@ -28,6 +28,8 @@ private:
            現在妥協的作法是先把 leaveQty 改成 0 但是這樣可能導致大量的殭屍委託卡在中間
     */
     std::unordered_map<OrdId, std::unique_ptr<Order>> orderPool_;
+    // Q: symbol 應該不是用指標，因為是在 stack 上面的物件？還是其實也可以用指標？
+    std::map<SymbId, Symbol> symbMap_;
 
     template<typename BookSide>
     Qty match(BookSide& counterside, Qty req_qty, Price req_pri, bool is_buy) {
@@ -88,7 +90,6 @@ public:
     // Books should be private, temparirly move to public for test
     OrderBooks books_;
     std::vector<TradeLog> tradeLogs_;
-    std::vector<Symbol> symbs_;
 
     bool SendNew(Order&);
     bool SendChg(ChgRequest&);
