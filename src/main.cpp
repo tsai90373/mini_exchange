@@ -13,7 +13,8 @@ int main(int argc, char* argv[]) {
     else {
         Exchange exchange;
         // server 跟 main 同生命週期
-        Server svr = Server{8080, exchange};
+        OrderSessionFactory fac{exchange};
+        Server svr = Server{8080, &fac};
         svr.run();
     }
 

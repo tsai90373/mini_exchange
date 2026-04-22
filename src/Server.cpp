@@ -28,7 +28,6 @@ bool Server::run() {
     if (listen(listen_fd, SOMAXCONN) < 0)
         perror("listen");
 
-    // 這啥？epoll也是fd
     int epfd = epoll_create1(0);
 
     /* 
@@ -46,23 +45,29 @@ bool Server::run() {
     epoll_event ev;
     ev.events = EPOLLIN;
     ev.data.fd = listen_fd;
-    if (epoll_ctl(epfd, EPOLL_CTL_ADD, listen_fd, &ev) < 0) 
+    if (epoll_ctl(epfd, EPOLL_CTL_ADD, listen_fd, &ev) < 0) {
         perror("epoll_ctl");
+        return false;
+    }
 
     epoll_event events[64];
     while (true) {
         printf("等待事件...\n");
         // 1. listen for both new connection and new data
         int n = epoll_wait(epfd, events, 64, -1);
-        if (n < 0)
+        if (n < 0) {
             perror("epoll wait");
+            return false;
+        }
         for (int i = 0; i < n; i++) {
             int fd = events[i].data.fd;
             if (fd == listen_fd) {
                 // new connection
                 int client_fd = accept(listen_fd, nullptr, nullptr);
                 printf("新連線: client_fd = %d\n", client_fd);
-                sessions_[client_fd] = std::make_unique<Session>(client_fd, exchange_);
+                // Q: 為什麼這裡一定要傳入1024，我不是OrdersessionFactory有default?
+                sessions_[client_fd] = factory_->create(client_fd, 1024);
+                // sessions_[client_fd] = std::make_unique<OrderSession>(client_fd, exchange_);
 
                 /* 
                     TODO: Factory
@@ -75,9 +80,10 @@ bool Server::run() {
                 epoll_event ev;
                 ev.events = EPOLLIN;
                 ev.data.fd = client_fd;
-                if (epoll_ctl(epfd, EPOLL_CTL_ADD, client_fd, &ev) < 0)
+                if (epoll_ctl(epfd, EPOLL_CTL_ADD, client_fd, &ev) < 0) {
                     perror("epoll ctl");
-
+                    return false;
+                }
             }
             else {
                 // connected
@@ -86,14 +92,15 @@ bool Server::run() {
 
                 // client 斷線
                 if (n == 0) {
-                    if (epoll_ctl(epfd, EPOLL_CTL_DEL, fd, nullptr) < 0)
+                    if (epoll_ctl(epfd, EPOLL_CTL_DEL, fd, nullptr) < 0) {
                         perror("epoll ctl");
+                        return false;
+                    }
                     sessions_.erase(fd);
                     close(fd);
                 }
                 else {
                     std::cout << "n=" << n << std::endl;
-                    buf[n] = '\0';
                     sessions_[fd]->OnRecvData(buf, n);
                     printf("收到： %s\n", buf);
                 }

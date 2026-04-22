@@ -1,7 +1,8 @@
 #pragma once
+#include<string>
 #include"Types.hpp"
 #include"Order.hpp"
-#include<string>
+#include"Wire.hpp"
 
 class Client {
 private:
@@ -16,7 +17,7 @@ public:
     // Send() needs fd
     int fd_;
     void run();
-    bool sendNew(Order&);
+    bool sendNew(OrderNewMsg&);
     bool sendChg(ChgRequest&);
     bool sendDel(OrdId);
 };

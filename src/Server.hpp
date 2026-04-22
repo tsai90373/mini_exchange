@@ -2,7 +2,6 @@
 #include<cstdint>
 #include<unordered_map>
 #include"Session.hpp"
-#include"Exchange.hpp"
 // An Exchange Server
 /* 
 my thought on creating a class
@@ -30,12 +29,13 @@ device is a wrapper of socket, and it owns sessions?
 class Server {
 private:
     uint32_t port_;
-    Exchange& exchange_;
-    // Q: 這種某個某物件的容器，標準就是要叫 物件s ? sessions_?
+    // TODO: 改成 reference
+    SessionFactory* factory_;
     std::unordered_map<int, std::unique_ptr<Session>> sessions_;
 
 public:
-    Server(uint32_t port, Exchange& exchange) : port_(port), exchange_(exchange) {};
+    // Q: 為什麼一開始傳入 SessionFactory 物件不可以，指標就可以？因為不能建立 abstract type，但是 pointer 可能是指向 subclass 是實體物件？
+    Server(uint32_t port, SessionFactory* factory) : port_(port), factory_(factory) {};
     bool run();
 
 /* 

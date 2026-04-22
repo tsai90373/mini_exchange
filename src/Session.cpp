@@ -1,16 +1,17 @@
 #include<cstring>
 #include<cstdio>
 #include<unistd.h>
+#include<iostream>
 #include"Types.hpp"
 #include"Session.hpp"
 #include"Order.hpp"
-#include<iostream>
+#include "Wire.hpp"
 
 
 
 
 
-bool Session::OnRecvData(char* buf, int n) {
+bool OrderSession::OnRecvData(char* buf, int n) {
     // suppose the first 4 bytes contains the total size of packet
     // totalsize should be a member variable otherwise it can not keep its state?
     if (recvSt_ == RecvState::WaitingHeader) {
@@ -23,7 +24,9 @@ bool Session::OnRecvData(char* buf, int n) {
     // process data after packet is fully received
     if (totalSize_ == 0) {
         printf("解讀完成");
-        Order requestNew = *reinterpret_cast<Order*>(buf_.data());
+        OrderNewMsg* msg = reinterpret_cast<OrderNewMsg*>(buf_.data());
+        Order requestNew(msg->ordId, msg->symbId, (msg->side == 'B') ? Side::Buy : Side::Sell, msg->price, msg->qty);
+
         printf("收到新單: ordId=%u price=%lu qty=%u\n", 
         requestNew.ordId_, requestNew.price_, requestNew.iniQty_);
         
@@ -43,4 +46,6 @@ bool Session::OnRecvData(char* buf, int n) {
 }
 
 
-
+std::unique_ptr<Session> OrderSessionFactory::create(int fd, uint32_t bufsize) {
+    return  std::make_unique<OrderSession>(fd, exchange_, bufsize);
+}

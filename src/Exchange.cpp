@@ -1,7 +1,8 @@
+#include<memory>
 #include"Order.hpp"
 #include"Exchange.hpp"
 #include"OrderBook.hpp"
-#include<memory>
+#include "Wire.hpp"
 
 
 
@@ -152,7 +153,7 @@ ExecReport Exchange::genReport(Order& ord, char exType) {
         rpt.ordId = ord.ordId_;
         rpt.price = ord.price_;
         rpt.qty = ord.iniQty_;
-        rpt.side_ = ord.side_;
+        rpt.side = 'B' ? ord.side_ == Side::Buy : 'S';
         return rpt;
     }
     // 成交回報
@@ -164,7 +165,7 @@ ExecReport Exchange::genReport(Order& ord, char exType) {
         // 成交量 & 剩餘量
         rpt.qty = ord.filledQty_;
         rpt.leaveQty = ord.leaveQty_;
-        rpt.side_ = ord.side_;
+        rpt.side = 'B' ? ord.side_ == Side::Buy : 'S';
         return rpt;
     }
 

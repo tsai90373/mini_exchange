@@ -15,7 +15,6 @@ public:
     int size_;
     OrdId ordId_;
     Side side_;
-    // Symbol symb_;
     SymbId symbId_;
     Price price_;
     Qty iniQty_;

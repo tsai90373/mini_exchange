@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <iostream>
 #include "Client.hpp"
+#include "Wire.hpp"
 
 
 void Client::run() {
@@ -35,24 +36,23 @@ void Client::run() {
         memcpy(id.data(), symbId.data(), std::min(symbId.size(), id.size()));
 
         Side side_enum = (side == 'B') ? Side::Buy : Side::Sell;
-        Order ord(ordId, id, side_enum, price, qty);
-        ord.size_ = sizeof(Order);
-        sendNew(ord);
+        OrderNewMsg msg;
+        msg.size = sizeof(OrderNewMsg);
+        msg.ordId = ordId;
+        msg.symbId = id;
+        msg.side = side;
+        msg.price = price;
+        msg.qty = qty;
+        sendNew(msg);
     }
 }
 
-bool Client::sendNew(Order& ord) {
+bool Client::sendNew(OrderNewMsg& msg) {
         printf("送出: ordId=%u price=%lu qty=%u side=%d\n", 
-           ord.ordId_, ord.price_, ord.iniQty_, (int)ord.side_);
-    // OrderNewMsg msg;
-    // msg.size   = sizeof(OrderNewMsg) - sizeof(msg.size);
-    // msg.ordId  = ord.ordId_;
-    // msg.symbId = ord.symbId_;
-    // msg.side   = (ord.side_ == Side::Buy) ? 'B' : 'S';
-    // msg.price  = ord.price_;
-    // msg.qty    = ord.iniQty_;
-    if (write(fd_, &ord, sizeof(ord)) < 0) { 
-        perror("write"); return false; 
+           msg.ordId, msg.price, msg.qty, (int)msg.side);
+    if (write(fd_, &msg, sizeof(msg)) < 0) { 
+        perror("write"); 
+        return false; 
     }
 
     ExecReport rpt;
