@@ -4,15 +4,14 @@
 #include"Exchange.hpp"
 #include<vector>
 
-
-enum class RecvState {
-    WaitingHeader,
-    WaitingBody
-};
-
 class Session {
 public:
-   virtual bool OnRecvData(char* buf, int n) = 0; 
+    bool OnRecvData(char* buf, int n); 
+    // base class needs virtual desctructor
+    virtual ~Session() = default;
+    virtual void ProcessMessage() = 0;
+    std::vector<char> buf_;
+    int fd_;
 };
 
 class SessionFactory {
@@ -25,14 +24,8 @@ class OrderSession : public Session {
 public:
     OrderSession(int fd, Exchange& exchange, uint32_t bufsize) : fd_(fd), exchange_(exchange) 
         { buf_.reserve(bufsize); };
-    bool OnRecvData(char* buf, int n) override;
-    int totalSize_;
-    int fd_;
-    // Using vector instead of char array to avoid buffer overflow
-    // Q: 雖然可以避免 buffer overflow，但是仍然是在 heap 上面的操作，仍然可能 relocate，是否直接用 stack 上面的 array ?
-    std::vector<char> buf_;
+    void ProcessMessage() override;
     Exchange& exchange_;
-    RecvState recvSt_ = RecvState::WaitingHeader;
 };
 
 class OrderSessionFactory : public SessionFactory {

@@ -4,6 +4,7 @@
 #include"Types.hpp"
 
 // Client API: Should disable padding or define layout
+// Q: size 放在裡面很奇怪？好像正常來說是要用外面再包一層 header
 #pragma pack(push, 1)
 struct OrderNewMsg {
     uint32_t size;   
