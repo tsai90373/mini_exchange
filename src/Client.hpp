@@ -17,7 +17,7 @@ public:
     // Send() needs fd
     int fd_;
     void run();
-    bool sendNew(OrderNewMsg&);
+    bool sendNew(OrderNewBody&);
     bool sendChg(ChgRequest&);
     bool sendDel(OrdId);
 };

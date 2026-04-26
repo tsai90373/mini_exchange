@@ -7,11 +7,12 @@ class Order {
 public:
     // 此為允許以 Order o; 的方式宣告，但在現在的情況不應該有空值
     // Order() = default;
-    Order(OrdId id, SymbId symbId, Side side, Price p, Qty q) 
-        : ordId_(id), side_(side), symbId_(symbId), price_(p), iniQty_(q), leaveQty_(q), filledQty_(0) {}
+    Order(SymbId symbId, Side side, Price p, Qty q) 
+        : side_(side), symbId_(symbId), price_(p), iniQty_(q), leaveQty_(q), filledQty_(0) {}
 
     /// Note: the initializeation will follow the order of declaration
     /// If there are dependencies in intiailization, there might be mistakes
+    // TODO: size 不應該是使用者傳入
     int size_;
     OrdId ordId_;
     Side side_;

@@ -16,11 +16,14 @@ bool Session::OnRecvData(char* buf, int n) {
     // totalsize should be a member variable otherwise it can not keep its state?
 
     buf_.insert(buf_.end(), buf, buf + n);
+
+    uint32_t headerSize = sizeof(MsgHeader);
+    uint32_t msgSize;
+    memcpy(&msgSize, buf_.data(), 4);
     // buffer based
-    while (buf_.size() >= 4) {
-        uint32_t msgSize;
-        memcpy(&msgSize, buf_.data(), 4);
-        if (buf_.size() < msgSize)
+    // 因為可能一次收到兩筆訊息，所以不能用 if 要用 while 把訊息都處理完
+    while (buf_.size() >= headerSize) {
+        if (buf_.size() < msgSize + headerSize)
             break;
         ProcessMessage();
         buf_.erase(buf_.begin(), buf_.begin() + msgSize);  // 移除已處理的
@@ -30,8 +33,8 @@ bool Session::OnRecvData(char* buf, int n) {
 
 void OrderSession::ProcessMessage() {
     printf("解讀完成");
-    OrderNewMsg* msg = reinterpret_cast<OrderNewMsg*>(buf_.data());
-    Order requestNew(msg->ordId, msg->symbId, (msg->side == 'B') ? Side::Buy : Side::Sell, msg->price, msg->qty);
+    OrderNewBody* msg = reinterpret_cast<OrderNewBody*>(buf_.data());
+    Order requestNew(msg->symbId, (msg->side == 'B') ? Side::Buy : Side::Sell, msg->price, msg->qty);
 
     printf("收到新單: ordId=%u price=%lu qty=%u\n", 
     requestNew.ordId_, requestNew.price_, requestNew.iniQty_);

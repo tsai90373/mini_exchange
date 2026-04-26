@@ -3,12 +3,21 @@
 #include<stdint.h>
 #include"Types.hpp"
 
-// Client API: Should disable padding or define layout
-// Q: size 放在裡面很奇怪？好像正常來說是要用外面再包一層 header
+
+enum class MsgType : uint16_t {
+    OrderNew = 1,
+    OrderChg = 2,
+    OrderDel = 3,
+};
+
 #pragma pack(push, 1)
-struct OrderNewMsg {
-    uint32_t size;   
-    uint32_t ordId;
+struct MsgHeader {
+    uint32_t size;     // body 的 bytes 數
+    MsgType msgType;  // 1=OrderNew, 2=OrderChg, 3=OrderDel
+};
+
+// Client API: Should disable padding or define layout
+struct OrderNewBody {
     SymbId   symbId;
     char     side;   // 'B' or 'S'
     uint64_t price;

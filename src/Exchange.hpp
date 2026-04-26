@@ -20,13 +20,8 @@ private:
         Qty qty_;
     };
 
-    /* 
-        為了快速做刪改單，系統應該需要一個 OrdId->Ord 的 mapping，這樣才能快速取得 Ord
-        改：直接拿取得 Ord 就可以操作 
-        刪：直接取得 Ord 後要如何從 queue 裡面拿出來？ queue 沒有辦法從中間 pop 
-           看來應該考慮使用其他的資料結構，否則刪單會有問題
-           現在妥協的作法是先把 leaveQty 改成 0 但是這樣可能導致大量的殭屍委託卡在中間
-    */
+    uint32_t ordIdCounter = 0;
+
     std::unordered_map<OrdId, std::unique_ptr<Order>> orderPool_;
     // Q: symbol 應該不是用指標，因為是在 stack 上面的物件？還是其實也可以用指標？
     std::map<SymbId, Symbol> symbMap_;
@@ -104,4 +99,6 @@ public:
     bool sendChg(ChgRequest&);
     bool sendDel(OrdId);
 
+    // for testing
+    bool AddSymbol(Symbol);
 };

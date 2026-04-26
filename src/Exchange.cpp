@@ -1,4 +1,5 @@
 #include<memory>
+#include<iostream>
 #include"Order.hpp"
 #include"Exchange.hpp"
 #include"OrderBook.hpp"
@@ -6,15 +7,20 @@
 
 
 
-// TODO: 是否要 const ord?
 ReportList Exchange::sendNew(Order& ord) {
     // 先根據 symbid 查 symb
-    auto symbPos = symbMap_.find(ord.symbId_);
-    if (symbPos == symbMap_.end()) {
+    auto symbInfo = symbMap_.find(ord.symbId_);
+    if (symbInfo == symbMap_.end()) {
+        // TODO: return 應該要有 error?
+        return ReportList{};
         // auto ptr = std::make_unique<OrderBook>;
         // books_[ord.symbId_] = ptr;
         // return ReportList{};
     }
+
+    // 交易所填入 Order Id
+    ord.ordId_ = ordIdCounter;
+    ordIdCounter++;
     
     // TODO: 可能會有風險，應該用 find -> Q: 原本這裡有風險，但是現在已經確定symb存在所以book存在
     if (books_.find(ord.symbId_) == books_.end()) {
@@ -170,5 +176,22 @@ ExecReport Exchange::genReport(Order& ord, char exType) {
     }
 
     return rpt;
+
+}
+
+bool Exchange::AddSymbol(Symbol symb) {
+    if (symbMap_.find(symb.id_) != symbMap_.end()) {
+        std::cout << "Add Symbol Failed. Symbol Id already exists." << std::endl;
+        return false;
+    }
+
+    if (symb.mkt_ != Market::OTC && symb.mkt_ != Market::TSE) {
+        std::cout << "Add Symbol Failed. Invalid market." << std::endl;
+        return false;
+    }
+
+    // Q: 這裡會用 copy 的吧？所以沒問題？
+    symbMap_[symb.id_] = symb;
+    return true;
 
 }
