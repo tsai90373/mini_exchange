@@ -6,6 +6,7 @@
 
 class Session {
 public:
+    Session(int fd) : fd_(fd) {};
     bool OnRecvData(char* buf, int n); 
     // base class needs virtual desctructor
     virtual ~Session() = default;
@@ -22,7 +23,7 @@ public:
 
 class OrderSession : public Session {
 public:
-    OrderSession(int fd, Exchange& exchange, uint32_t bufsize) : fd_(fd), exchange_(exchange) 
+    OrderSession(int fd, Exchange& exchange, uint32_t bufsize) : Session(fd), exchange_(exchange) 
         { buf_.reserve(bufsize); };
     void ProcessMessage() override;
     Exchange& exchange_;
