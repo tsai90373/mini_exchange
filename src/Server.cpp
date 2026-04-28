@@ -8,6 +8,9 @@
 #include <cstdio>
 #include <iostream>
 
+constexpr int READ_BUFFER_SIZE = 1024;
+constexpr int MAX_EPOLL_EVENTS = 64;
+
 bool Server::run() {
     int listen_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (listen_fd < 0)
@@ -30,18 +33,6 @@ bool Server::run() {
 
     int epfd = epoll_create1(0);
 
-    /* 
-        struct epoll_event {
-            uint32_t events;   // 你要監控什麼事件（EPOLLIN、EPOLLOUT 等）
-            epoll_data_t data; // 你自己存的資料，通常用 data.fd
-        };
-        union epoll_data_t {
-            int      fd;
-            uint32_t u32;
-            uint64_t u64;
-            void*    ptr;  // 進階用法，可以存任何東西
-        };
-    */
     epoll_event ev;
     ev.events = EPOLLIN;
     ev.data.fd = listen_fd;
@@ -50,11 +41,11 @@ bool Server::run() {
         return false;
     }
 
-    epoll_event events[64];
+    epoll_event events[MAX_EPOLL_EVENTS];
     while (true) {
         printf("等待事件...\n");
         // 1. listen for both new connection and new data
-        int n = epoll_wait(epfd, events, 64, -1);
+        int n = epoll_wait(epfd, events, MAX_EPOLL_EVENTS, -1);
         if (n < 0) {
             perror("epoll wait");
             return false;
@@ -66,17 +57,7 @@ bool Server::run() {
                 int client_fd = accept(listen_fd, nullptr, nullptr);
                 printf("新連線: client_fd = %d\n", client_fd);
                 // Q: 為什麼這裡一定要傳入1024，我不是OrdersessionFactory有default?
-                sessions_[client_fd] = factory_->create(client_fd, 1024);
-                // sessions_[client_fd] = std::make_unique<OrderSession>(client_fd, exchange_);
-
-                /* 
-                    TODO: Factory
-                    new connection -> new session
-                    how to create a new session?
-                    maybe use a session factory? session factory is derived from a base factory class?
-                    and this should be a template class such as Factory<Session>, Factory<Order> etc.
-                */
-
+                sessions_[client_fd] = factory_->create(client_fd);
                 epoll_event ev;
                 ev.events = EPOLLIN;
                 ev.data.fd = client_fd;
@@ -87,7 +68,7 @@ bool Server::run() {
             }
             else {
                 // connected
-                char buf[1024];
+                char buf[READ_BUFFER_SIZE];
                 int n = read(fd, buf, sizeof(buf));
 
                 // client 斷線

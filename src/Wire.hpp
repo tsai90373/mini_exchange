@@ -16,13 +16,31 @@ struct MsgHeader {
     MsgType msgType;  // 1=OrderNew, 2=OrderChg, 3=OrderDel
 };
 
+
 // Client API: Should disable padding or define layout
 struct OrderNewBody {
     SymbId   symbId;
     char     side;   // 'B' or 'S'
-    uint64_t price;
-    uint32_t qty;
+    Price price;
+    Qty qty;
 };
+
+struct OrderNewRequest {
+    MsgHeader header;
+    OrderNewBody body;
+};
+
+struct OrderChgBody {
+    OrdId ordId;
+    Price price;
+    Qty qty;
+};
+
+struct OrderChgRequest {
+    MsgHeader header;
+    OrderChgBody body;
+};
+
 #pragma pack(pop)
 
 #pragma pack(push, 1)

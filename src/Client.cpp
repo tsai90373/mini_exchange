@@ -31,29 +31,34 @@ void Client::run() {
         char type, side;
         std::string symbId;
         SymbId id{};
-        uint32_t ordId, price, qty;
-        std::cin >> symbId >> type >> ordId >> price >> qty >> side;
+        uint32_t price, qty;
+        std::cin >> symbId >> type >> price >> qty >> side;
         memcpy(id.data(), symbId.data(), std::min(symbId.size(), id.size()));
 
         Side side_enum = (side == 'B') ? Side::Buy : Side::Sell;
 
+        OrderNewRequest req;
+
         MsgHeader header;
         header.size = sizeof(OrderNewBody);
         header.msgType = MsgType::OrderNew;
+        req.header = header;
 
         OrderNewBody msg;
         msg.symbId = id;
         msg.side = side;
         msg.price = price;
         msg.qty = qty;
-        sendNew(msg);
+        req.body = msg;
+
+        sendNew(req);
     }
 }
 
-bool Client::sendNew(OrderNewBody& msg) {
-        printf("送出: ordId=%u price=%lu qty=%u side=%d\n", 
-           msg.price, msg.qty, (int)msg.side);
-    if (write(fd_, &msg, sizeof(msg)) < 0) { 
+bool Client::sendNew(OrderNewRequest& req) {
+        // printf("送出: ordId=%u price=%lu qty=%u side=%d\n", 
+        //    req.price, req.qty, (int)req.side);
+    if (write(fd_, &req, sizeof(req)) < 0) { 
         perror("write"); 
         return false; 
     }

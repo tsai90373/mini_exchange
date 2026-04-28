@@ -12,8 +12,6 @@ public:
 
     /// Note: the initializeation will follow the order of declaration
     /// If there are dependencies in intiailization, there might be mistakes
-    // TODO: size 不應該是使用者傳入
-    int size_;
     OrdId ordId_;
     Side side_;
     SymbId symbId_;
