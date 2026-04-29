@@ -18,7 +18,7 @@ public:
 class SessionFactory {
 public:
     virtual ~SessionFactory() = default;
-    virtual std::unique_ptr<Session> create(int fd, uint32_t bufsize) = 0;
+    virtual std::unique_ptr<Session> create(int fd) = 0;
 };
 
 class OrderSession : public Session {
@@ -33,8 +33,9 @@ class OrderSessionFactory : public SessionFactory {
 public:
     OrderSessionFactory(Exchange& exchange) : exchange_(exchange) {};
     Exchange& exchange_;
+    uint32_t bufsize_ = 1024;
     // The entrance for every request from a client
-    std::unique_ptr<Session> create(int fd, uint32_t bufsize = 1024) override;
+    std::unique_ptr<Session> create(int fd) override;
 
 
 };

@@ -4,6 +4,20 @@ set(CMAKE_CXX_STANDARD 17)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out)
 
+# Debug build flags
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_options(
+        -fsanitize=address
+        -fsanitize=undefined
+        -fno-omit-frame-pointer  # ← 為了 stack trace 漂亮
+        -g
+    )
+    add_link_options(
+        -fsanitize=address
+        -fsanitize=undefined
+    )
+endif()
+
 add_executable(exchange
     src/main.cpp
     src/Exchange.cpp
