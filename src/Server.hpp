@@ -1,6 +1,7 @@
 #pragma once
 #include<cstdint>
 #include<unordered_map>
+#include<memory>
 
 // forward declaration
 class Session;
@@ -15,5 +16,6 @@ private:
 
 public:
     Server(uint32_t port, SessionFactory* factory) : port_(port), factory_(factory) {};
+    ~Server();
     bool run();
 };

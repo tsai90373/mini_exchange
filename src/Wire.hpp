@@ -50,9 +50,11 @@ struct ExecReport {
     uint64_t price;     // 成交價（N/R 的時候沒意義）
     uint32_t qty;       // 成交量
     uint32_t leaveQty;
-    char     side; 
+    char     side;
     char     execType;  // 'N'ew 'F'ill 'P'artial 'R'ejected 'C'anceled
     char     rejectReason[16];  // 拒絕原因
+    uint64_t recv_ts;   // order 進系統的時間（從 Order 帶過來）
+    uint64_t send_ts;   // report write() 前打；send_ts - recv_ts = e2e exchange latency
 };
 #pragma pack(pop)
 

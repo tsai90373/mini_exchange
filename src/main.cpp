@@ -3,6 +3,7 @@
 #include"Exchange.hpp"
 #include"Types.hpp"
 #include"Client.hpp"
+#include"Session.hpp"
 #include"Server.hpp"
 
 int main(int argc, char* argv[]) {

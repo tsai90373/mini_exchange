@@ -2,6 +2,16 @@ cmake_minimum_required(VERSION 3.14)
 project(mini_exchange)
 set(CMAKE_CXX_STANDARD 17)
 
+include(FetchContent)
+FetchContent_Declare(
+    hdr_histogram
+    GIT_REPOSITORY https://github.com/HdrHistogram/HdrHistogram_c.git
+    GIT_TAG        0.11.8
+)
+set(HDR_HISTOGRAM_BUILD_PROGRAMS OFF CACHE BOOL "" FORCE)
+set(HDR_LOG_REQUIRED OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(hdr_histogram)
+
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out)
 
 # Debug build flags
@@ -35,5 +45,15 @@ add_executable(test_exchange
     src/OrderBook.cpp
 )
 
-find_package(GTest REQUIRED)
-target_link_libraries(test_exchange GTest::GTest GTest::Main)
+target_link_libraries(exchange hdr_histogram_static)
+target_include_directories(exchange PRIVATE ${hdr_histogram_SOURCE_DIR}/include)
+
+target_link_libraries(test_exchange hdr_histogram_static)
+target_include_directories(test_exchange PRIVATE ${hdr_histogram_SOURCE_DIR}/include)
+
+find_package(GTest QUIET)
+if(GTest_FOUND)
+    target_link_libraries(test_exchange GTest::GTest GTest::Main)
+else()
+    message(STATUS "GTest not found — skipping test_exchange")
+endif()
