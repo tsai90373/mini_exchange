@@ -1,4 +1,5 @@
 #include"Server.hpp"
+#include"Session.hpp"
 #include <sys/socket.h>
 #include <sys/epoll.h>
 #include <netinet/in.h>
@@ -10,6 +11,8 @@
 
 constexpr int READ_BUFFER_SIZE = 1024;
 constexpr int MAX_EPOLL_EVENTS = 64;
+
+Server::~Server() = default;
 
 bool Server::run() {
     int listen_fd = socket(AF_INET, SOCK_STREAM, 0);

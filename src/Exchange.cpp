@@ -3,39 +3,45 @@
 #include"Order.hpp"
 #include"Exchange.hpp"
 #include"OrderBook.hpp"
-#include "Wire.hpp"
+#include"Wire.hpp"
+#include"Timestamp.hpp"
 
 
 
 ReportList Exchange::sendNew(Order& ord) {
+    reports_.clear();
+
     // 先根據 symbid 查 symb
     auto symbInfo = symbMap_.find(ord.symbId_);
     if (symbInfo == symbMap_.end()) {
         // TODO: return 應該要有 error?
         return ReportList{};
-        // auto ptr = std::make_unique<OrderBook>;
-        // books_[ord.symbId_] = ptr;
-        // return ReportList{};
     }
 
     // 交易所填入 Order Id
     ord.ordId_ = ordIdCounter;
     ordIdCounter++;
-    
+
     // TODO: 可能會有風險，應該用 find -> Q: 原本這裡有風險，但是現在已經確定symb存在所以book存在
     if (books_.find(ord.symbId_) == books_.end()) {
         books_[ord.symbId_] = new OrderBook();
     }
     auto book = books_[ord.symbId_];
+
     const auto log_begin = tradeLogs_.size();
     Price req_pri = ord.price_;
     Qty req_qty = ord.iniQty_;
+    bool is_buy = ord.side_ == Side::Buy;
+    ScopedRecord sendnew_guard(sendnew_latency_);  // 兩條 return path 都自動記錄
 
-    bool is_buy = ord.side_ == Side::Buy; 
     // 新單買單
     if (is_buy) {
-        if (book->ask_1 > 0 && req_pri >= book->ask_1) 
+        if (book->ask_1 > 0 && req_pri >= book->ask_1) {
+            uint64_t match_start_ts = now_ns();
             req_qty = match<Asks>(book->asks_, req_qty, req_pri, is_buy);
+            match_latency_.record(now_ns() - match_start_ts);
+        }
+
         // T: 新單成功後，應該在這邊先做一個新單成功的回報（用原始委託數量）
         reports_.push_back(genReport(ord, 'N'));
 
@@ -64,8 +70,11 @@ ReportList Exchange::sendNew(Order& ord) {
         return reports_;
     }
     // 新單賣單
-    if (book->bid_1 > 0 && req_pri <= book->bid_1)
+    if (book->bid_1 > 0 && req_pri <= book->bid_1) {
+        uint64_t match_start_ts = now_ns();
         req_qty = match<Bids>(book->bids_, req_qty, req_pri, is_buy);
+        match_latency_.record(now_ns() - match_start_ts);
+    }
 
     reports_.push_back(genReport(ord, 'N'));
     ord.leaveQty_ = req_qty;
@@ -94,8 +103,7 @@ ReportList Exchange::sendNew(Order& ord) {
     }
     for (size_t i = log_begin; i < tradeLogs_.size(); ++i)
         tradeLogs_[i].aggressiveOrdId_ = ord.ordId_;
-    
-    return reports_;
+    return reports_;  // sendnew_guard destructor 在這裡自動 record
 }
 
 /*

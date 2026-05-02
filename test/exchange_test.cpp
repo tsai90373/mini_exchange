@@ -2,6 +2,7 @@
 #include "../src/Exchange.hpp"
 #include "../src/Order.hpp"
 #include "../src/Types.hpp"
+#include "../src/Timestamp.hpp"
 
 class ExchangeTest : public testing::Test {
 protected:
@@ -47,6 +48,23 @@ TEST_F(ExchangeTest, PriceMismatch) {
     EXPECT_EQ(exchange.books_[symb.id_]->bids_[90].front()->leaveQty_, 20);
     EXPECT_EQ(exchange.books_[symb.id_]->asks_[100].size(), 1);
     EXPECT_EQ(exchange.books_[symb.id_]->asks_[100].front()->leaveQty_, 10);
+}
+
+TEST_F(ExchangeTest, MatchLatencyBenchmark) {
+    constexpr int N = 100'000;
+
+    for (int i = 0; i < N; ++i) {
+        Order buy(symb.id_, Side::Buy, 100, 1);
+        buy.recv_ts = now_ns();
+        exchange.sendNew(buy);
+
+        Order sell(symb.id_, Side::Sell, 100, 1);
+        sell.recv_ts = now_ns();
+        exchange.sendNew(sell);
+    }
+
+    exchange.sendnew_latency_.report();
+    exchange.match_latency_.report();
 }
 
 TEST_F(ExchangeTest, MultilevelSweep) {

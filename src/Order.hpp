@@ -1,13 +1,14 @@
 #pragma once
 
-#include"Types.hpp"
+#include "Types.hpp"
+#include <cstdint>
 
 
 class Order {
 public:
     // 此為允許以 Order o; 的方式宣告，但在現在的情況不應該有空值
     // Order() = default;
-    Order(SymbId symbId, Side side, Price p, Qty q) 
+    Order(SymbId symbId, Side side, Price p, Qty q)
         : side_(side), symbId_(symbId), price_(p), iniQty_(q), leaveQty_(q), filledQty_(0) {}
 
     /// Note: the initializeation will follow the order of declaration
@@ -19,6 +20,9 @@ public:
     Qty iniQty_;
     Qty leaveQty_;
     Qty filledQty_;
+
+    uint64_t recv_ts  = 0;   // Session 解完 header 後立刻打，代表訂單進系統的時間
+    uint64_t match_ts = 0;   // Exchange::sendNew 撮合完成後打
 };
 
 struct ChgRequest {

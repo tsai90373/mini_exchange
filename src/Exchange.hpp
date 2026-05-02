@@ -6,7 +6,8 @@
 #include"Types.hpp"
 #include"OrderBook.hpp"
 #include"Order.hpp"
-#include "Wire.hpp"
+#include"Wire.hpp"
+#include"LatencyRecorder.hpp"
 
 
 using OrderBooks = std::map<SymbId, OrderBook*>;
@@ -87,6 +88,11 @@ public:
     std::vector<TradeLog> tradeLogs_;
     // Q: 先用最間單的方式，如果有新單成功，就加入新單回報，如果有成交，就送兩個回報
     std::vector<ExecReport> reports_;
+
+    // 1ns ~ 10s 範圍，3 significant figures (0.1% 誤差)
+    LatencyRecorder sendnew_latency_      {"sendnew", 1, 10'000'000'000LL, 3};
+    LatencyRecorder match_latency_        {"match",   1, 10'000'000'000LL, 3};
+    LatencyRecorder e2e_latency_          {"e2e",     1, 10'000'000'000LL, 3};
 
     /*
         要做回報需要什麼？
