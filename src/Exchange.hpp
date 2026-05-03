@@ -24,65 +24,89 @@ private:
     uint32_t ordIdCounter = 0;
 
     std::unordered_map<OrdId, std::unique_ptr<Order>> orderPool_;
-    // Q: symbol 應該不是用指標，因為是在 stack 上面的物件？還是其實也可以用指標？
-    std::map<SymbId, Symbol> symbMap_;
 
-    template<typename BookSide>
-    Qty match(BookSide& counterside, Qty req_qty, Price req_pri, bool is_buy) {
-        // 成交：但是可能不只吃掉 ask1，必須一路往上找
-        // 1. 先拿到ask1的queue
-        // 2. 在ask1的queue一個一個配對看數量是否足夠
+    Qty match(OrderBook& book, Qty req_qty, Price req_pri, bool is_buy) {
+        const size_t req_pri_idx = book.getPriIndex(req_pri);
+
+        if (is_buy) {
+            // 買單吃 ask：ask1_ 從低 idx 往高推進。
+            while (req_qty > 0) {
+                if (!book.hasAsk()) break;
+                if (req_pri_idx < book.ask1_) break;
+
+                auto& q = book.asks_[book.ask1_];
+                if (q.empty()) {
+                    ++book.ask1_;
+                    continue;
+                }
+
+                Order* ord = q.front();
+                if (ord->leaveQty_ == 0) {  // 已刪單
+                    q.pop();
+                    orderPool_.erase(ord->ordId_);
+                    continue;
+                }
+
+                const Qty filled = std::min(ord->leaveQty_, req_qty);
+                ord->leaveQty_ -= filled;
+                req_qty        -= filled;
+                tradeLogs_.emplace_back(TradeLog{0, ord->ordId_, ord->price_, filled});
+
+                if (ord->leaveQty_ == 0) {
+                    q.pop();
+                    orderPool_.erase(ord->ordId_);
+                }
+
+                while (book.hasAsk() && book.asks_[book.ask1_].empty())
+                    ++book.ask1_;
+            }
+            return req_qty;
+        }
+
+        // sell 吃 bid：bid1_ 從高 idx 往低推進。
         while (req_qty > 0) {
-            // TODO: 這邊每次一直重新拿看起來是不好的作法?
-            auto& p = counterside.begin()->first;
-            if ((p > req_pri && is_buy) || (p < req_pri && !is_buy))
-                break;
+            if (!book.hasBid()) break;
+            if (req_pri_idx > book.bid1_) break;
 
-            auto& q = counterside.begin()->second;
-            Order* old_ord = q.front();
-            if (old_ord->leaveQty_ == 0) {
-                q.pop();
-                orderPool_.erase(old_ord->ordId_);
+            auto& q = book.bids_[book.bid1_];
+            if (q.empty()) {
+                if (book.bid1_ == 0) { book.bid1_ = book.bids_.size(); break; }
+                --book.bid1_;
                 continue;
             }
-            // 情況1: 新單沒有完全成交
-            if (old_ord->leaveQty_ < req_qty) {
-                const Qty matched_qty = old_ord->leaveQty_;
-                // neword 減掉 leaveqty
-                req_qty -= matched_qty;
 
-                // oldord直接滿足並且pop
-                old_ord->filledQty_ = old_ord->iniQty_;
-                old_ord->leaveQty_ = 0;
-                tradeLogs_.emplace_back(TradeLog{0, old_ord->ordId_, old_ord->price_, matched_qty});
+            Order* ord = q.front();
+            if (ord->leaveQty_ == 0) {
                 q.pop();
-                // 注意！生命週期是由 orderpool管理，單純從 queue pop raw pointer 並不會刪除 heap 上面的 Order
-                orderPool_.erase(old_ord->ordId_);
+                orderPool_.erase(ord->ordId_);
+                continue;
             }
-            // 情況2: 可以完全成交
-            else {
-                const Qty matched_qty = req_qty;
-                // old_ord 減掉 qty
-                old_ord->filledQty_ += req_qty;
-                old_ord->leaveQty_ -= req_qty;
-                tradeLogs_.emplace_back(TradeLog{0, old_ord->ordId_, old_ord->price_, matched_qty});
-                if (old_ord->leaveQty_ == 0) {
-                    q.pop();
-                    orderPool_.erase(old_ord->ordId_);
-                }
-                // new ord 滿足直接結束
-                req_qty = 0;
+
+            const Qty filled = std::min(ord->leaveQty_, req_qty);
+            ord->leaveQty_ -= filled;
+            req_qty        -= filled;
+            tradeLogs_.emplace_back(TradeLog{0, ord->ordId_, ord->price_, filled});
+
+            if (ord->leaveQty_ == 0) {
+                q.pop();
+                orderPool_.erase(ord->ordId_);
             }
-            if (q.empty()) {
-                counterside.erase(counterside.begin());
-                if (counterside.empty()) 
-                    break;
+
+            // 推進 bid1_ 到下一個非空 level（往低 idx 走，注意 underflow）
+            while (book.hasBid() && book.bids_[book.bid1_].empty()) {
+                if (book.bid1_ == 0) { book.bid1_ = book.bids_.size(); break; }
+                --book.bid1_;
             }
         }
         return req_qty;
     };
 
 public:
+    Exchange() { 
+        LoadSymbol(); 
+        GenOrderBooks();
+    };
+    std::map<SymbId, Symbol> symbMap_;
     // Books should be private, temparirly move to public for test
     OrderBooks books_;
     std::vector<TradeLog> tradeLogs_;
@@ -94,17 +118,14 @@ public:
     LatencyRecorder match_latency_        {"match",   1, 10'000'000'000LL, 3};
     LatencyRecorder e2e_latency_          {"e2e",     1, 10'000'000'000LL, 3};
 
-    /*
-        要做回報需要什麼？
-        其實好想只需要傳入 Order
-        如果 
-    */
     ExecReport genReport(Order&, char);
 
     ReportList sendNew(Order&);
     bool sendChg(ChgRequest&);
     bool sendDel(OrdId);
 
-    // for testing
-    bool AddSymbol(Symbol);
+    // add some testing symbol 
+    void LoadSymbol();
+
+    void GenOrderBooks();
 };
