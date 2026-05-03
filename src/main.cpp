@@ -31,7 +31,7 @@ int main(int argc, char* argv[]) {
     // exchange.sendNew(buy1);
     // OrderBook* book = exchange.books_[sym];
     // assert(book->bids_[100].size() == 1);
-    // assert(book->bid_1 == 100);
+    // assert(book->bid1_ == 100);
 
     // // 情況2: sell 價格可以成交
     // Order sell1(2, sym, Side::Sell, 100, 10);

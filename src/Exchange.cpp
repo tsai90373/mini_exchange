@@ -1,4 +1,5 @@
 #include<memory>
+#include<vector>
 #include<iostream>
 #include"Order.hpp"
 #include"Exchange.hpp"
@@ -18,15 +19,24 @@ ReportList Exchange::sendNew(Order& ord) {
         return ReportList{};
     }
 
+    // // TODO: 可能會有風險，應該用 find -> Q: 原本這裡有風險，但是現在已經確定symb存在所以book存在
+    // if (books_.find(ord.symbId_) == books_.end()) {
+    //     books_[ord.symbId_] = new OrderBook();
+    // }
+    // 目前是確定有 symbinfo 一定會有 orderbook
+    auto bookInfo = books_.find(ord.symbId_);
+    if (bookInfo == books_.end() || bookInfo->second == nullptr) {
+        return ReportList{};
+    }
+
+    OrderBook* book = bookInfo->second;
+    if (!book->isValidPrice(ord.price_)) {
+        return ReportList{};
+    }
+
     // 交易所填入 Order Id
     ord.ordId_ = ordIdCounter;
     ordIdCounter++;
-
-    // TODO: 可能會有風險，應該用 find -> Q: 原本這裡有風險，但是現在已經確定symb存在所以book存在
-    if (books_.find(ord.symbId_) == books_.end()) {
-        books_[ord.symbId_] = new OrderBook();
-    }
-    auto book = books_[ord.symbId_];
 
     const auto log_begin = tradeLogs_.size();
     Price req_pri = ord.price_;
@@ -34,76 +44,63 @@ ReportList Exchange::sendNew(Order& ord) {
     bool is_buy = ord.side_ == Side::Buy;
     ScopedRecord sendnew_guard(sendnew_latency_);  // 兩條 return path 都自動記錄
 
+    const size_t req_pri_idx = book->getPriIndex(req_pri);
+
     // 新單買單
     if (is_buy) {
-        if (book->ask_1 > 0 && req_pri >= book->ask_1) {
+        if (book->hasAsk() && req_pri_idx >= book->ask1_) {
             uint64_t match_start_ts = now_ns();
-            req_qty = match<Asks>(book->asks_, req_qty, req_pri, is_buy);
+            req_qty = match(*book, req_qty, req_pri, is_buy);
             match_latency_.record(now_ns() - match_start_ts);
         }
 
-        // T: 新單成功後，應該在這邊先做一個新單成功的回報（用原始委託數量）
         reports_.push_back(genReport(ord, 'N'));
-
-        ord.leaveQty_ = req_qty;
+        ord.leaveQty_  = req_qty;
         ord.filledQty_ = ord.iniQty_ - ord.leaveQty_;
-
-        // T: 如果 filledQty > 0，再加上成交回報
         reports_.push_back(genReport(ord, 'F'));
-        // 更新 ask1
-        if (book->asks_.empty()) 
-            book->ask_1 = 0;
-        else 
-            book->ask_1 = book->asks_.begin()->first;
 
-        // 有剩餘量: 掛到 bids 上面
+        // 有剩餘量：掛到 bids
         if (req_qty) {
             auto newOrd = std::make_unique<Order>(ord);
             Order* ptr = newOrd.get();
             orderPool_.insert_or_assign(ord.ordId_, std::move(newOrd));
-            book->bids_[req_pri].push(ptr);
-            // 既然可以直接成交，代表一定是最高價
-            book->bid_1 = req_pri;
+            book->bids_[req_pri_idx].push(ptr);
+            // best bid 只在新價更高、或原本沒 bid 時更新
+            if (!book->hasBid() || req_pri_idx > book->bid1_) {
+                book->bid1_ = req_pri_idx;
+            }
         }
         for (size_t i = log_begin; i < tradeLogs_.size(); ++i)
             tradeLogs_[i].aggressiveOrdId_ = ord.ordId_;
         return reports_;
     }
+
     // 新單賣單
-    if (book->bid_1 > 0 && req_pri <= book->bid_1) {
+    if (book->hasBid() && req_pri_idx <= book->bid1_) {
         uint64_t match_start_ts = now_ns();
-        req_qty = match<Bids>(book->bids_, req_qty, req_pri, is_buy);
+        req_qty = match(*book, req_qty, req_pri, is_buy);
         match_latency_.record(now_ns() - match_start_ts);
     }
 
     reports_.push_back(genReport(ord, 'N'));
-    ord.leaveQty_ = req_qty;
+    ord.leaveQty_  = req_qty;
     ord.filledQty_ = ord.iniQty_ - ord.leaveQty_;
     reports_.push_back(genReport(ord, 'F'));
 
-    // 更新 bid_1
-    if (book->bids_.empty()) 
-        book->bid_1 = 0;
-    else 
-        book->bid_1 = book->bids_.begin()->first;
-
-    // 有剩餘量: 掛到 asks 上面
+    // 有剩餘量：掛到 asks
     if (req_qty) {
-        /*  
-            unordered_map 的 [] 必須確定 default constructor 存在
-            orderPool_[ord.ordId_] -> 若 value 不存在，會先 call default constructor 再 assign
-            要告訴 compiler 這個 key 一定存在 -> 用 at() 
-        */
-        auto newOrd = std::make_unique<Order>(ord);    // unique pointer
-        Order* ptr = newOrd.get();                     // raw pointer
+        auto newOrd = std::make_unique<Order>(ord);
+        Order* ptr = newOrd.get();
         orderPool_.insert_or_assign(ord.ordId_, std::move(newOrd));
-        book->asks_[req_pri].push(ptr);
-        // 既然可以直接成交，代表一定是最低價
-        book->ask_1 = req_pri;
+        book->asks_[req_pri_idx].push(ptr);
+        // best ask 只在新價更低、或原本沒 ask 時更新
+        if (!book->hasAsk() || req_pri_idx < book->ask1_) {
+            book->ask1_ = req_pri_idx;
+        }
     }
     for (size_t i = log_begin; i < tradeLogs_.size(); ++i)
         tradeLogs_[i].aggressiveOrdId_ = ord.ordId_;
-    return reports_;  // sendnew_guard destructor 在這裡自動 record
+    return reports_;
 }
 
 /*
@@ -167,7 +164,7 @@ ExecReport Exchange::genReport(Order& ord, char exType) {
         rpt.ordId = ord.ordId_;
         rpt.price = ord.price_;
         rpt.qty = ord.iniQty_;
-        rpt.side = 'B' ? ord.side_ == Side::Buy : 'S';
+        rpt.side = ord.side_ == Side::Buy ? 'B' : 'S';
         return rpt;
     }
     // 成交回報
@@ -179,7 +176,7 @@ ExecReport Exchange::genReport(Order& ord, char exType) {
         // 成交量 & 剩餘量
         rpt.qty = ord.filledQty_;
         rpt.leaveQty = ord.leaveQty_;
-        rpt.side = 'B' ? ord.side_ == Side::Buy : 'S';
+        rpt.side = ord.side_ == Side::Buy ? 'B' : 'S';
         return rpt;
     }
 
@@ -187,19 +184,43 @@ ExecReport Exchange::genReport(Order& ord, char exType) {
 
 }
 
-bool Exchange::AddSymbol(Symbol symb) {
-    if (symbMap_.find(symb.id_) != symbMap_.end()) {
-        std::cout << "Add Symbol Failed. Symbol Id already exists." << std::endl;
-        return false;
+void Exchange::LoadSymbol() {
+    Symbol symb1{"2330", Market::TSE, 100, 110, 90};
+    symb1.TickSize_ = getTickSize(90);
+    // 注意：這裡 symbol 必須要有 default constructor，因為會先用 default 再 copy construct
+    symbMap_["2330"] = symb1;
+
+    Symbol symb2{"2308", Market::TSE, 50, 55, 45};
+    symb2.TickSize_ = getTickSize(45);
+    symbMap_["2308"] = symb2;
+
+    Symbol symb3{"2603", Market::TSE, 70, 77, 63};
+    symb3.TickSize_ = getTickSize(63);
+    symbMap_["2603"] = symb3;
+
+    Symbol symb4{"2345", Market::TSE, 500, 550, 450};
+    symb4.TickSize_ = getTickSize(450);
+    symbMap_["2345"] = symb4;
+
+    Symbol symb5{"6669", Market::TSE, 30, 33, 27};
+    symb5.TickSize_ = getTickSize(27);
+    symbMap_["6669"] = symb5;
+}
+
+void Exchange::GenOrderBooks() {
+    for (auto pair: symbMap_) {
+        Symbol symb = pair.second;
+        uint64_t len = (symb.UpLmt_ - symb.DnLmt_) / symb.TickSize_ + 1;
+
+        OrderBook* ordBook = new OrderBook();
+        ordBook->bids_ = std::vector<std::queue<Order*>>(len);
+        ordBook->asks_ = std::vector<std::queue<Order*>>(len);
+        ordBook->bid1_ = ordBook->bids_.size();
+        ordBook->ask1_ = ordBook->asks_.size();
+        ordBook->DnLmt_ = symb.DnLmt_;
+        // ordBook->Ref_ = symb.Ref_;
+        // ordBook->UpLmt_ = symb.UpLmt_;
+        ordBook->TickSize_ = symb.TickSize_;
+        books_[symb.id_] = ordBook;
     }
-
-    if (symb.mkt_ != Market::OTC && symb.mkt_ != Market::TSE) {
-        std::cout << "Add Symbol Failed. Invalid market." << std::endl;
-        return false;
-    }
-
-    // Q: 這裡會用 copy 的吧？所以沒問題？
-    symbMap_[symb.id_] = symb;
-    return true;
-
 }
