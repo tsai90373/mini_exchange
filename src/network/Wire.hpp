@@ -1,7 +1,7 @@
 #pragma once
 // Seperate Wire and Domain
 #include<stdint.h>
-#include"Types.hpp"
+#include"engine/Types.hpp"
 
 
 enum class MsgType : uint16_t {
@@ -13,13 +13,13 @@ enum class MsgType : uint16_t {
 #pragma pack(push, 1)
 struct MsgHeader {
     uint32_t size;     // body 的 bytes 數
-    MsgType msgType;  // 1=OrderNew, 2=OrderChg, 3=OrderDel
+    MsgType msg_type;  // 1=OrderNew, 2=OrderChg, 3=OrderDel
 };
 
 
 // Client API: Should disable padding or define layout
 struct OrderNewBody {
-    SymbId   symbId;
+    SymbId   symb_id;
     char     side;   // 'B' or 'S'
     Price price;
     Qty qty;
@@ -31,7 +31,7 @@ struct OrderNewRequest {
 };
 
 struct OrderChgBody {
-    OrdId ordId;
+    OrdId ord_id;
     Price price;
     Qty qty;
 };
@@ -46,13 +46,13 @@ struct OrderChgRequest {
 #pragma pack(push, 1)
 struct ExecReport {
     uint32_t size;
-    uint32_t ordId;
+    uint32_t ord_id;
     uint64_t price;     // 成交價（N/R 的時候沒意義）
     uint32_t qty;       // 成交量
-    uint32_t leaveQty;
+    uint32_t leave_qty;
     char     side;
-    char     execType;  // 'N'ew 'F'ill 'P'artial 'R'ejected 'C'anceled
-    char     rejectReason[16];  // 拒絕原因
+    char     exec_type;  // 'N'ew 'F'ill 'P'artial 'R'ejected 'C'anceled
+    char     reject_reason[16];  // 拒絕原因
     uint64_t recv_ts;   // order 進系統的時間（從 Order 帶過來）
     uint64_t send_ts;   // report write() 前打；send_ts - recv_ts = e2e exchange latency
 };

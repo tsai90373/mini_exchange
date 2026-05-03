@@ -10,7 +10,7 @@ using SymbId = std::string;
 using Price = uint64_t;
 using Qty = uint32_t;
 
-inline double getTickSize(uint64_t price) {
+inline double GetTickSize(uint64_t price) {
     if (price >= 10 && price < 50)
         return 0.05;
     else if (price >= 50 && price < 100)
@@ -23,13 +23,13 @@ inline double getTickSize(uint64_t price) {
 }
 
 enum class Side {
-    Buy,
-    Sell
+    kBuy,
+    kSell
 };
 
 enum class Market {
-    TSE = 'T',
-    OTC = 'O',
+    kTSE = 'T',
+    kOTC = 'O',
 };
 
 class Symbol {
@@ -39,12 +39,12 @@ public:
     }
     Symbol() = default;
     Symbol(SymbId id, Market mkt, Price ref, Price uplmt, Price dnlmt)
-        : id_(id), mkt_(mkt), Ref_(ref), UpLmt_(uplmt), DnLmt_(dnlmt) {};
+        : id_(id), mkt_(mkt), ref_(ref), uplmt_(uplmt), dnlmt_(dnlmt) {};
     SymbId id_;
     Market mkt_;
-    Price Ref_;
-    Price UpLmt_;
-    Price DnLmt_;
-    double TickSize_;
+    Price ref_;
+    Price uplmt_;
+    Price dnlmt_;
+    double tick_size_;
 };
 

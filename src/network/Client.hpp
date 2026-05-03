@@ -1,7 +1,7 @@
 #pragma once
 #include<string>
-#include"Types.hpp"
-#include"Order.hpp"
+#include"engine/Types.hpp"
+#include"engine/Order.hpp"
 #include"Wire.hpp"
 
 class Client {
@@ -16,8 +16,8 @@ public:
     Client(Config cfg) : cfg_(std::move(cfg)) {};
     // Send() needs fd
     int fd_;
-    void run();
-    bool sendNew(OrderNewRequest&);
-    bool sendChg(ChgRequest&);
-    bool sendDel(OrdId);
+    void Run();
+    bool SendNew(OrderNewRequest&);
+    bool SendChg(ChgRequest&);
+    bool SendDel(OrdId);
 };

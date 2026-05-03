@@ -9,7 +9,7 @@
 #include "Wire.hpp"
 
 
-void Client::run() {
+void Client::Run() {
     fd_ = socket(AF_INET, SOCK_STREAM, 0);
     if (fd_ < 0) { 
         perror("socket"); 
@@ -29,33 +29,33 @@ void Client::run() {
 
     while (true) {
         char type, side;
-        std::string symbId;
+        std::string symb_id;
         SymbId id{};
         uint32_t price, qty;
-        std::cin >> symbId >> type >> price >> qty >> side;
-        memcpy(id.data(), symbId.data(), std::min(symbId.size(), id.size()));
+        std::cin >> symb_id >> type >> price >> qty >> side;
+        memcpy(id.data(), symb_id.data(), std::min(symb_id.size(), id.size()));
 
-        Side side_enum = (side == 'B') ? Side::Buy : Side::Sell;
+        Side side_enum = (side == 'B') ? Side::kBuy : Side::kSell;
 
         OrderNewRequest req;
 
         MsgHeader header;
         header.size = sizeof(OrderNewBody);
-        header.msgType = MsgType::OrderNew;
+        header.msg_type = MsgType::OrderNew;
         req.header = header;
 
         OrderNewBody msg;
-        msg.symbId = id;
+        msg.symb_id = id;
         msg.side = side;
         msg.price = price;
         msg.qty = qty;
         req.body = msg;
 
-        sendNew(req);
+        SendNew(req);
     }
 }
 
-bool Client::sendNew(OrderNewRequest& req) {
+bool Client::SendNew(OrderNewRequest& req) {
         // printf("送出: ordId=%u price=%lu qty=%u side=%d\n", 
         //    req.price, req.qty, (int)req.side);
     if (write(fd_, &req, sizeof(req)) < 0) { 
@@ -68,7 +68,7 @@ bool Client::sendNew(OrderNewRequest& req) {
         perror("read"); 
         return false; 
     }
-    printf("回報: execType=%c ordId=%u qty=%u\n", rpt.execType, rpt.ordId, rpt.qty);
+    printf("回報: execType=%c ordId=%u qty=%u\n", rpt.exec_type, rpt.ord_id, rpt.qty);
 
     return true;
 }

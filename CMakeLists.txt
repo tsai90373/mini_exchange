@@ -28,28 +28,39 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     )
 endif()
 
+set(EXCHANGE_SOURCES
+    src/engine/Exchange.cpp
+    src/engine/Order.cpp
+    src/engine/OrderBook.cpp
+)
+
+set(NETWORK_SOURCES
+    src/network/Client.cpp
+    src/network/Server.cpp
+    src/network/Session.cpp
+)
+
 add_executable(exchange
     src/main.cpp
-    src/Exchange.cpp
-    src/Client.cpp
-    src/Order.cpp
-    src/OrderBook.cpp
-    src/Server.cpp
-    src/Session.cpp
+    src/main.cpp
+    ${EXCHANGE_SOURCES}
+    ${NETWORK_SOURCES}
 )
 
 add_executable(test_exchange
     test/exchange_test.cpp
-    src/Exchange.cpp
-    src/Order.cpp
-    src/OrderBook.cpp
+    ${EXCHANGE_SOURCES}
 )
 
 target_link_libraries(exchange hdr_histogram_static)
-target_include_directories(exchange PRIVATE ${hdr_histogram_SOURCE_DIR}/include)
+target_include_directories(exchange PRIVATE 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${hdr_histogram_SOURCE_DIR}/include)
 
 target_link_libraries(test_exchange hdr_histogram_static)
-target_include_directories(test_exchange PRIVATE ${hdr_histogram_SOURCE_DIR}/include)
+target_include_directories(test_exchange PRIVATE 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${hdr_histogram_SOURCE_DIR}/include)
 
 find_package(GTest QUIET)
 if(GTest_FOUND)

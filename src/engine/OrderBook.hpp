@@ -23,19 +23,19 @@ public:
     // 哨兵：== bids_.size() / asks_.size() 表示該側為空。
     size_t ask1_ = 0;
     size_t bid1_ = 0;
-    Price DnLmt_;
-    double TickSize_;
+    Price dnlmt_;
+    double tick_size_;
 
-    inline size_t getPriIndex(Price p) const {
-        return static_cast<size_t>(std::llround((p - DnLmt_) / TickSize_));
+    inline size_t GetPriIndex(Price p) const {
+        return static_cast<size_t>(std::llround((p - dnlmt_) / tick_size_));
     }
 
-    inline bool isValidPrice(Price p) const {
-        return p >= DnLmt_ && getPriIndex(p) < bids_.size();
+    inline bool IsValidPrice(Price p) const {
+        return p >= dnlmt_ && GetPriIndex(p) < bids_.size();
     }
 
-    inline bool hasAsk() const { return ask1_ < asks_.size(); }
-    inline bool hasBid() const { return bid1_ < bids_.size(); }
+    inline bool HasAsk() const { return ask1_ < asks_.size(); }
+    inline bool HasBid() const { return bid1_ < bids_.size(); }
 };
 
 /*

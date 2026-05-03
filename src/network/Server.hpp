@@ -17,5 +17,5 @@ private:
 public:
     Server(uint32_t port, SessionFactory* factory) : port_(port), factory_(factory) {};
     ~Server();
-    bool run();
+    bool Run();
 };
