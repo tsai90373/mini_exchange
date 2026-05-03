@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
 #include <random>
-#include "../src/Exchange.hpp"
-#include "../src/Order.hpp"
-#include "../src/Types.hpp"
-#include "../src/Timestamp.hpp"
+#include "engine/Exchange.hpp"
+#include "engine/Order.hpp"
+#include "engine/Types.hpp"
+#include "tools/Timestamp.hpp"
 
 class ExchangeTest : public testing::Test {
 protected:

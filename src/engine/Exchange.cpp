@@ -4,8 +4,8 @@
 #include"Order.hpp"
 #include"Exchange.hpp"
 #include"OrderBook.hpp"
-#include"Wire.hpp"
-#include"Timestamp.hpp"
+#include"network/Wire.hpp"
+#include"tools/Timestamp.hpp"
 
 
 

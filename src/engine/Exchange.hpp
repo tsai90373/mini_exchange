@@ -6,8 +6,8 @@
 #include"Types.hpp"
 #include"OrderBook.hpp"
 #include"Order.hpp"
-#include"Wire.hpp"
-#include"LatencyRecorder.hpp"
+#include"network/Wire.hpp"
+#include"tools/LatencyRecorder.hpp"
 
 
 using OrderBooks = std::map<SymbId, OrderBook*>;

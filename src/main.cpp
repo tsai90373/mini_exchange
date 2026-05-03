@@ -1,10 +1,10 @@
 #include<cassert>
 #include<string>
-#include"Exchange.hpp"
-#include"Types.hpp"
-#include"Client.hpp"
-#include"Session.hpp"
-#include"Server.hpp"
+#include"engine/Exchange.hpp"
+#include"engine/Types.hpp"
+#include"network/Client.hpp"
+#include"network/Session.hpp"
+#include"network/Server.hpp"
 
 int main(int argc, char* argv[]) {
     if (argc > 1 && std::string(argv[1]) == "client") {

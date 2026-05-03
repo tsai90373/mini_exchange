@@ -2,3 +2,5 @@ build
 idea/
 notes/
 claude.md
+.claude
+.vscode
