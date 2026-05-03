@@ -16,8 +16,8 @@ public:
     Client(Config cfg) : cfg_(std::move(cfg)) {};
     // Send() needs fd
     int fd_;
-    void run();
-    bool sendNew(OrderNewRequest&);
-    bool sendChg(ChgRequest&);
-    bool sendDel(OrdId);
+    void Run();
+    bool SendNew(OrderNewRequest&);
+    bool SendChg(ChgRequest&);
+    bool SendDel(OrdId);
 };

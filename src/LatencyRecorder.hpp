@@ -67,8 +67,8 @@ struct ScopedRecord {
     LatencyRecorder& rec;
     uint64_t start;
 
-    ScopedRecord(LatencyRecorder& r) : rec(r), start(now_ns()) {}
-    ~ScopedRecord() { rec.record(now_ns() - start); }
+    ScopedRecord(LatencyRecorder& r) : rec(r), start(NowNs()) {}
+    ~ScopedRecord() { rec.record(NowNs() - start); }
 
     ScopedRecord(const ScopedRecord&) = delete;
     ScopedRecord& operator=(const ScopedRecord&) = delete;

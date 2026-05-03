@@ -9,12 +9,12 @@
 #include <cstdio>
 #include <iostream>
 
-constexpr int READ_BUFFER_SIZE = 1024;
-constexpr int MAX_EPOLL_EVENTS = 64;
+constexpr int kReadBufferSize = 1024;
+constexpr int kMaxEpollEvents = 64;
 
 Server::~Server() = default;
 
-bool Server::run() {
+bool Server::Run() {
     int listen_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (listen_fd < 0)
         perror("socket");
@@ -44,11 +44,11 @@ bool Server::run() {
         return false;
     }
 
-    epoll_event events[MAX_EPOLL_EVENTS];
+    epoll_event events[kMaxEpollEvents];
     while (true) {
         printf("等待事件...\n");
         // 1. listen for both new connection and new data
-        int n = epoll_wait(epfd, events, MAX_EPOLL_EVENTS, -1);
+        int n = epoll_wait(epfd, events, kMaxEpollEvents, -1);
         if (n < 0) {
             perror("epoll wait");
             return false;
@@ -60,7 +60,7 @@ bool Server::run() {
                 int client_fd = accept(listen_fd, nullptr, nullptr);
                 printf("新連線: client_fd = %d\n", client_fd);
                 // Q: 為什麼這裡一定要傳入1024，我不是OrdersessionFactory有default?
-                sessions_[client_fd] = factory_->create(client_fd);
+                sessions_[client_fd] = factory_->Create(client_fd);
                 epoll_event ev;
                 ev.events = EPOLLIN;
                 ev.data.fd = client_fd;
@@ -71,7 +71,7 @@ bool Server::run() {
             }
             else {
                 // connected
-                char buf[READ_BUFFER_SIZE];
+                char buf[kReadBufferSize];
                 int n = read(fd, buf, sizeof(buf));
 
                 // client 斷線
