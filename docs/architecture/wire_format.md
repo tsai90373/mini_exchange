@@ -48,14 +48,21 @@ V1 草稿。所有訊息是 **UTF-8 JSON**，每筆一個 ZMQ frame。
   "ts_ns": 1715769600123456789,
   "data": {
     "code": "TXFE5",
+    "exchange": "TAIFEX",
     "exchange_ts_ns": 1715769600100000000,
     "close": 21500.0,
     "open": 21480.0,
     "high": 21520.0,
     "low": 21470.0,
+    "avg_price": 21490.3,
     "volume": 3,
     "total_volume": 12345,
+    "amount": 1290000.0,
+    "total_amount": 5310750000.0,
     "tick_type": 1,
+    "chg_type": 2,
+    "price_chg": 25.0,
+    "pct_chg": 0.1163,
     "bid_side_total_vol": 6500,
     "ask_side_total_vol": 5800,
     "underlying_price": 21495.5,
@@ -67,22 +74,31 @@ V1 草稿。所有訊息是 **UTF-8 JSON**，每筆一個 ZMQ frame。
 | 欄位 | 型別 | 對應 Shioaji |
 |------|------|--------------|
 | `code` | string | `tick.code` |
+| `exchange` | string enum | `tick.exchange.value`；`"TSE"` / `"OTC"` / `"OES"` / `"TAIFEX"` |
 | `exchange_ts_ns` | uint64 | `tick.datetime` → epoch ns（**底層精度 µs**，見設計決策 3） |
 | `close` | float | `tick.close`（Decimal → float） |
 | `open` / `high` / `low` | float | 同上 |
+| `avg_price` | float | `tick.avg_price`（broker 端算的當日均價） |
 | `volume` | uint32 | `tick.volume`（這筆量） |
-| `total_volume` | uint64 | `tick.total_volume` |
+| `total_volume` | uint64 | `tick.vol_sum` |
+| `amount` | float | `tick.amount`（單筆成交額 NTD = price × volume × 契約乘數）⚠️ 見精度註 |
+| `total_amount` | float | `tick.amount_sum`（當日累計成交額 NTD）⚠️ 見精度註 |
 | `tick_type` | uint8 | `tick.tick_type`；1=外盤買, 2=內盤賣, 0=不明 |
-| `bid_side_total_vol` | uint64 | `tick.bid_side_total_vol` |
-| `ask_side_total_vol` | uint64 | `tick.ask_side_total_vol` |
-| `underlying_price` | float | `tick.underlying_price`（期權才有意義；期貨會是該期貨自己的價，可忽略） |
+| `chg_type` | uint8 | `tick.diff_type`；1=漲停, 2=漲, 3=平盤, 4=跌, 5=跌停 |
+| `price_chg` | float | `tick.diff_price`（vs 昨收） |
+| `pct_chg` | float | `tick.diff_rate`（漲跌幅 %） |
+| `bid_side_total_vol` | uint64 | `tick.trade_bid_vol_sum` |
+| `ask_side_total_vol` | uint64 | `tick.trade_ask_vol_sum` |
+| `underlying_price` | float | `tick.target_kind_price`（期權才有意義；期貨會是該期貨自己的價，可忽略） |
 | `simtrade` | uint8 | `tick.simtrade`；**0=正式撮合, 1=試撮**（盤前 8:30–9:00、收盤前集合競價、夜盤試撮會是 1） |
+
+⚠️ **精度註（V1 取捨）：** `amount` / `total_amount` / 價格類欄位 wire 上是 JSON number，C++ 端目前全 parse 成 `double`。Shioaji 原生用 `Decimal`。`total_amount` 為 broker 端 tick-by-tick 累加值，理論上 IEEE 754 累加會 drift；V1 純當顯示 / 策略 feature，不做 engine 自累加 == broker_total_amount 的對帳。要做對帳時改 `int64` cents 或 `Decimal` 替代。
 
 **simtrade 處理規則**：C++ 端策略主迴圈必須先檢查 `simtrade`：
 - 一般策略：`if (simtrade) return;`，試撮的價量不可進撮合假設、不可成交、不可下單觸發
 - 盤前分析策略：另開分支吃 simtrade==1 的封包
 
-V1 沒帶的 TickFOPv1 欄位（之後需要再加）：`amount`、`total_amount`、`avg_price`、`chg_type`、`price_chg`、`pct_chg`。其中 `total_amount` 算 VWAP 會用到，但可由 C++ 端自行累積 `price × volume` 得到。
+V1 沒帶的 TickFOPv1 欄位：`date` / `time` tuple（與 `datetime` → `exchange_ts_ns` 重複，省）。其他原本 deferred 的欄位（`amount` / `total_amount` / `avg_price` / `chg_*`）已在 § 2 全部加入。
 
 ---
 
@@ -331,6 +347,5 @@ V1 收到 `Disconnected` C++ 端直接結束（fail-fast，符合 DESIGN.md）�
 - `update_order` (改價/改量) 對應的 wire 訊息 — 先不支援改單，要改就 cancel + new
 - 股票 tick / bidask（`TickSTKv1` / `BidAskSTKv1`）— 之後加
 - 組合單（combo orders）
-- TickFOPv1 的 `amount` / `total_amount` / `avg_price` / `chg_*`（C++ 自行累積）
 - BidAskFOPv1 的 `diff_*_vol` / `first_derived_*`（一檔隱含委託）
 - FuturesDealEvent 的 `combo` / `subaccount` / 選擇權合約解析欄位

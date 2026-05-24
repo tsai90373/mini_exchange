@@ -71,6 +71,23 @@ set(JSON_BuildTests OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(nlohmann_json)
 
 # ----- Targets ------------------------------------------------------------
-add_executable(bridge_demo src/bridge/main.cc)
+add_executable(bridge_demo
+    src/bridge/main.cc
+    src/core/Engine.cpp
+    src/core/Backend.cpp
+    src/core/Order.cpp
+    src/adapter/PythonFeedAdapter.cpp
+    src/core/InboundEvents.hpp)
 target_link_libraries(bridge_demo PRIVATE cppzmq nlohmann_json::nlohmann_json)
 target_include_directories(bridge_demo PRIVATE src)
+
+# Smoke test for PythonFeedAdapter — no ZMQ link, hand-crafted JSON fixtures.
+add_executable(adapter_smoke
+    tests/adapter_smoke.cc
+    src/core/Engine.cpp
+    src/core/Backend.cpp
+    src/core/Order.cpp
+    src/adapter/PythonFeedAdapter.cpp
+    src/core/InboundEvents.hpp)
+target_link_libraries(adapter_smoke PRIVATE nlohmann_json::nlohmann_json)
+target_include_directories(adapter_smoke PRIVATE src)

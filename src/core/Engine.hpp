@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <vector>
 #include "Backend.hpp"
+#include "InboundEvents.hpp"
 #include "Order.hpp"
 #include "Types.hpp"
 
@@ -39,13 +40,16 @@ public:
     // TODO: 若未來需要區分「保持原價」vs「改為 0 元」，改用 std::optional<Price>。
     bool SendChg(ClOrdId id, Qty new_qty, Price new_pri = 0);
 
-    // 由 Python adapter 透過 inbound channel 推入：ack / fill / reject。
-    // TODO: 補上 inbound event struct（對齊 wire_format.md § 5/§ 6），
-    //       依 op_type 與 accepted 旗標 dispatch 到對應的處理路徑：
-    //         - new ack         → 找 order, Begin/Commit 把 ord_st_ 改成 NEWASK
-    //         - fill            → leave_qty_ -= fill_qty, filled_qty_ += fill_qty
-    //         - chg ack / cancel ack → 更新 ord_st_
-    void OnReportIn(/* InboundEvent */);
+    // PythonFeedAdapter 把 ZMQ 上解出來的 5 種 inbound msg 推進來。
+    // V1 全部 log + TODO；真實 dispatch / 狀態機等 IStrategy 介面到位後補上。
+    void OnTick      (const Tick&          ev);
+    void OnBidAsk    (const BidAsk&        ev);
+    void OnOrderAck  (const OrderAckEvent& ev);
+    void OnFill      (const FillEvent&     ev);
+    void OnConnEvent (const ConnEvent&     ev);
+
+    // main loop 用這個決定要不要退出（OnConnEvent 收到 Disconnected 時會 set）。
+    bool ShouldStop() const { return stop_requested_; }
 
 private:
     bool    RiskCheck(const Request& req);
@@ -59,9 +63,11 @@ private:
 
     std::vector<IStrategy*> strategies_;  // 不擁有
 
-    // TODO: 一旦 ClOrdId 改成 std::string（ADR-0003 規定的字串格式），
-    //       AllocateClOrdId 改成回傳 "{strategy}-{boot_yymmddhhmm}-{counter}"。
+    // monotonic counter，per-process scope。Wire 上序列化為字串。見 ADR-0005。
     uint32_t cid_counter_ = 1;
 
     int64_t total_profit_ = 0;  // 當日已實現損益；超過上限時可停 Engine
+
+    // OnConnEvent 收到 Disconnected 時 set true；bridge/main.cc 的主迴圈讀這個退出。
+    bool stop_requested_ = false;
 };

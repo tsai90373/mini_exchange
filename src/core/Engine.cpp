@@ -1,5 +1,7 @@
 #include "Engine.hpp"
 
+#include <iostream>
+
 bool Engine::SendNew(const Request& req) {
     if (!RiskCheck(req)) {
         return false;
@@ -17,7 +19,7 @@ bool Engine::SendNew(const Request& req) {
     raw->leave_qty_= req.qty;
     raw->filled_qty_ = 0;
     raw->ord_st_   = OrdSt::SENDING;
-    // TODO: raw->symb_ = req.symb;  Symbol 是 char[4]，需要 memcpy 或改成 struct wrapper
+    raw->symb_     = req.symb;
     backend_.Commit(raw);
     return true;
 }
@@ -43,14 +45,60 @@ bool Engine::SendChg(ClOrdId id, Qty new_qty, Price new_pri) {
     return true;
 }
 
-void Engine::OnReportIn(/* InboundEvent */) {
-    // TODO: 待 inbound event struct 定義後實作。
-    //       骨架：
-    //         auto it = orders_.find(event.client_order_id);
-    //         if (it == orders_.end()) return;  // 或 log
-    //         OrderRaw* raw = backend_.Begin(*it->second);
-    //         依 event 內容改 ord_st_ / leave_qty_ / filled_qty_ / ordno_
-    //         backend_.Commit(raw);
+void Engine::OnTick(const Tick& ev) {
+    // TODO(IStrategy): fan out to strategies' on_tick callbacks.
+    //   V1 has no IStrategy interface yet — Engine.hpp only forward-declares it.
+    std::cerr << "[engine] OnTick code=" << ev.code
+              << " close=" << ev.deal
+              << " vol=" << ev.volume
+              << " simtrade=" << int(ev.simtrade)
+              << " seq=" << ev.env.seq_num << '\n';
+}
+
+void Engine::OnBidAsk(const BidAsk& ev) {
+    // TODO(IStrategy): fan out to strategies' on_bidask callbacks.
+    std::cerr << "[engine] OnBidAsk code=" << ev.code
+              << " bid1=" << ev.bid_price[0]
+              << " ask1=" << ev.ask_price[0]
+              << " seq=" << ev.env.seq_num << '\n';
+}
+
+void Engine::OnOrderAck(const OrderAckEvent& ev) {
+    // TODO(state-machine): 真實處理時做：
+    //   ClOrdId cid = std::stoul(ev.client_order_id);  // 可能 throw，要 try/catch
+    //   auto it = orders_.find(cid);
+    //   if (it == orders_.end()) { /* late ack for purged order, log */ return; }
+    //   OrderRaw* raw = backend_.Begin(*it->second);
+    //   raw->ord_st_ = ev.accepted ? OrdSt::NEWASK : OrdSt::FAILED;
+    //   backend_.Commit(raw);
+    // 等 IStrategy 跟「fill 早於 ack」的狀態機設計確定再實作。
+    std::cerr << "[engine] OnOrderAck client_order_id=" << ev.client_order_id
+              << " op_type=" << int(ev.op_type)
+              << " accepted=" << ev.accepted
+              << " op_code=" << ev.op_code << '\n';
+}
+
+void Engine::OnFill(const FillEvent& ev) {
+    // TODO(state-machine): 同 OnOrderAck 的 stoul lookup pattern。
+    //   raw->filled_qty_ += ev.quantity;
+    //   raw->leave_qty_  -= ev.quantity;
+    //   raw->ord_st_     = (raw->leave_qty_ == 0) ? OrdSt::FULL_FILLED : OrdSt::PARTIAL_FILLED;
+    // Position / total_profit_ 更新在獨立 module（不在 Engine scope）。
+    std::cerr << "[engine] OnFill client_order_id=" << ev.client_order_id
+              << " code=" << ev.code
+              << " px=" << ev.price
+              << " qty=" << ev.quantity << '\n';
+}
+
+void Engine::OnConnEvent(const ConnEvent& ev) {
+    std::cerr << "[engine] OnConnEvent src=" << int(ev.source)
+              << " code=" << int(ev.code)
+              << " info=" << ev.info << '\n';
+    if (ev.code == EventCode::Disconnected) {
+        // ADR-0001 fail-fast on disconnect. Flag rather than throw, so the
+        // handler remains pure and the main loop owns the exit path.
+        stop_requested_ = true;
+    }
 }
 
 bool Engine::RiskCheck(const Request& req) {

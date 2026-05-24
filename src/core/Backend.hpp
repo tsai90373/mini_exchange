@@ -5,6 +5,7 @@
 #include <vector>
 #include "Order.hpp"
 #include "Types.hpp"
+#include "Subscriber.hpp"
 
 // Append-only 歷史儲存 + RxSno 分配 + 事件發佈出口。
 //
@@ -37,7 +38,7 @@ public:
 
     // ZMQ outbound、log writer、audit 各自註冊一個 subscriber。
     // 註冊順序即觸發順序。
-    void Subscribe(ISubscriber* sub);
+    void Subscribe(Subscriber* sub);
 
     // 給 audit / replay：按 RxSno 取得歷史條目。
     // 回傳 nullptr 表示 sno 越界。
@@ -56,5 +57,5 @@ private:
     //   API 不變，Engine 不受影響。
     std::deque<OrderRaw> history_;
     RxSno last_sno_ = 0;
-    std::vector<ISubscriber*> subscribers_;
+    std::vector<Subscriber*> subscribers_;
 };

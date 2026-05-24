@@ -44,7 +44,7 @@ _Avoid_: `action` (that means Buy/Sell, a different field), `operation`, `op` (t
 ### Order identity
 
 **client_order_id**:
-The engine-generated string that uniquely identifies one Order over its lifetime. **The only identifier the engine, Strategies, and wire format ever speak in.** V1 format: `{strategy_name}-{boot_yymmdd_hhmm}-{counter}` (e.g., `DT-TEX-260517-1330-001`). See `docs/adr/0003-order-identity.md`.
+The engine-generated identifier that uniquely identifies one Order over its lifetime. **The only identifier the engine, Strategies, and wire format ever speak in.** Internally a `uint32_t` monotonic counter (`Engine::AllocateClOrdId`); on the wire serialized via `std::to_string` → `"1"`, `"2"`, etc. Strategy attribution lives in `Backend` log entries, not in the ID. See `docs/adr/0005-clordid-stays-uint32.md` (current); `docs/adr/0003-order-identity.md` (ownership rules, partially superseded).
 _Avoid_: `client_id`, `order_id` (ambiguous — both names overlap with broker IDs), `oid`.
 
 **broker_order_id** _(out of engine scope)_:
@@ -71,4 +71,4 @@ Monotonic uint32 assigned by `Backend::Commit` to each `OrderRaw`. The sequence 
 - **`Request` (domain) vs `order_request` (wire `msg_type`)** — same concept at two layers. The C++ class is `Request`; the JSON `msg_type` is `order_request`. Don't mix the names when speaking about one specific layer.
 - **`wire_format.md` § 4 and § 8 are stale w.r.t. the canonical `op_type` vocabulary** — § 4 needs `op_type` added to the `order_request` schema; § 8 should drop the "改單先不支援" line. Update when convenient.
 - **`wire_format.md` § 5 and § 6 are stale w.r.t. ADR-0003** — drop the `broker_order_id` field from `order_ack` and `fill` schemas. § 4's "client_order_id 的角色" subsection should be rewritten to describe a single `client_order_id ↔ ordno` map.
-- **`ClOrdId` is currently `uint32_t` in `Types.hpp`** — ADR-0003 mandates the string form `{strategy}-{boot_yymmddhhmm}-{counter}`. Type migration is tracked as separate work; until then, `Engine::AllocateClOrdId` returns a counter.
+- **`wire_format.md` § 4 "client_order_id 的角色" still references the ADR-0003 string format** — ADR-0005 dropped the string format; values on the wire are now `std::to_string(uint32)`. The two-map vs single-map adapter logic discussion is unchanged. Update prose when convenient.
