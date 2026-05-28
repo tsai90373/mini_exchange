@@ -11,15 +11,20 @@ bool Engine::SendNew(const Request& req) {
     auto [it, inserted] = orders_.try_emplace(cid, std::make_unique<Order>(cid));
     Order& order = *it->second;
 
-    OrderRaw* raw  = backend_.Begin(order);
-    raw->id_       = cid;
-    raw->side_     = req.side;
-    raw->pri_      = req.pri;
-    raw->ini_qty_  = req.qty;
-    raw->leave_qty_= req.qty;
+    OrderRaw* raw    = backend_.Begin(order);
+    raw->id_         = cid;
+    raw->side_       = req.side;
+    raw->pri_        = req.pri;
+    raw->ini_qty_    = req.qty;
+    raw->leave_qty_  = req.qty;
     raw->filled_qty_ = 0;
-    raw->ord_st_   = OrdSt::SENDING;
-    raw->symb_     = req.symb;
+    raw->ord_st_     = OrdSt::SENDING;
+    raw->symb_       = req.symb;
+    raw->price_type_ = req.price_type;
+    raw->order_type_ = req.order_type;
+    raw->octype_     = req.octype;
+    raw->account_    = req.account;
+    raw->op_type_    = OpType::New;
     backend_.Commit(raw);
     return true;
 }
@@ -41,6 +46,17 @@ bool Engine::SendChg(ClOrdId id, Qty new_qty, Price new_pri) {
         raw->pri_ = new_pri;
     }
     raw->ord_st_ = OrdSt::SENDING;
+    // 三向分支對應 wire spec § 4 op_type：
+    //   qty == 0      → Cancel（CONTEXT.md：no separate SendCancel API）
+    //   new_pri != 0  → UpdatePrice
+    //   else          → UpdateQty
+    if (new_qty == 0) {
+        raw->op_type_ = OpType::Cancel;
+    } else if (new_pri != 0) {
+        raw->op_type_ = OpType::UpdatePrice;
+    } else {
+        raw->op_type_ = OpType::UpdateQty;
+    }
     backend_.Commit(raw);
     return true;
 }

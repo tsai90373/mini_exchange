@@ -77,6 +77,7 @@ add_executable(bridge_demo
     src/core/Backend.cpp
     src/core/Order.cpp
     src/adapter/PythonFeedAdapter.cpp
+    src/adapter/PythonOrderAdapter.cpp
     src/core/InboundEvents.hpp)
 target_link_libraries(bridge_demo PRIVATE cppzmq nlohmann_json::nlohmann_json)
 target_include_directories(bridge_demo PRIVATE src)
@@ -91,3 +92,14 @@ add_executable(adapter_smoke
     src/core/InboundEvents.hpp)
 target_link_libraries(adapter_smoke PRIVATE nlohmann_json::nlohmann_json)
 target_include_directories(adapter_smoke PRIVATE src)
+
+# Smoke test for PythonOrderAdapter — no ZMQ link, drives Engine.SendNew/SendChg
+# with a recording lambda and inspects the JSON envelopes.
+add_executable(order_adapter_smoke
+    tests/order_adapter_smoke.cc
+    src/core/Engine.cpp
+    src/core/Backend.cpp
+    src/core/Order.cpp
+    src/adapter/PythonOrderAdapter.cpp)
+target_link_libraries(order_adapter_smoke PRIVATE nlohmann_json::nlohmann_json)
+target_include_directories(order_adapter_smoke PRIVATE src)

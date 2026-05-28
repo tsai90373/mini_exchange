@@ -90,7 +90,7 @@ struct BidAsk {
 };
 
 // ---------- § 5 order_ack ----------
-enum class OpType : uint8_t { New, Cancel, UpdatePrice, UpdateQty, Unknown };
+// OpType 已搬到 Types.hpp（outbound / inbound 共用）。
 enum class MarketType : uint8_t { Day, Night, Unknown };
 
 struct OrderAckEvent {

@@ -33,6 +33,19 @@ public:
     Qty      filled_qty_= 0;
     OrdSt    ord_st_    = OrdSt::SENDING;
 
+    // Request qualifiers — set once by Engine.SendNew，後續 Begin-from-tail
+    // 會自動繼承（cancel / chg 沿用原始 price_type / octype / account）。
+    PriceType price_type_ = PriceType::LMT;
+    OrderType order_type_ = OrderType::ROD;
+    OCType    octype_     = OCType::Auto;
+    Account   account_    = Account::FutOpt;
+
+    // 這筆 commit 是「Strategy 發起的什麼操作」。Backend.Begin 每次都會 reset
+    // 成 Unknown，caller (SendNew / SendChg) 必須顯式 set。
+    // Unknown = 不是 strategy request（例如 OnOrderAck 寫的 raw），
+    // PythonOrderAdapter 會跳過、不對外發送。
+    OpType    op_type_    = OpType::Unknown;
+
     Order* GetOrder() const { return order_; }
 
 private:

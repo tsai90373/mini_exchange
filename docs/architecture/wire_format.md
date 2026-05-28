@@ -155,11 +155,12 @@ V1 沒帶的 BidAskFOPv1 欄位（之後需要再加）：
   "seq_num": 100,
   "ts_ns": 1715769600200000000,
   "data": {
-    "client_order_id": "tickengine-0001",
+    "client_order_id": "1",
     "code": "TXFE5",
     "action": "Buy",
     "price": 21500.0,
     "quantity": 1,
+    "op_type": "New",
     "price_type": "LMT",
     "order_type": "ROD",
     "octype": "Auto",
@@ -170,11 +171,12 @@ V1 沒帶的 BidAskFOPv1 欄位（之後需要再加）：
 
 | 欄位 | 型別 | 說明 |
 |------|------|------|
-| `client_order_id` | string | **C++ 自己產的 ID**，必填，全局唯一。後續 `order_ack` / `fill` 都會帶這個回來，C++ 用這個做關聯 |
+| `client_order_id` | string | **C++ 自己產的 ID**（uint32 monotonic 序列化成字串，例 `"1"` / `"2"`，見 ADR-0005）。後續 `order_ack` / `fill` 都會帶這個回來 |
 | `code` | string | 合約代碼（如 `TXFE5`、`TXO202506C21000`） |
 | `action` | enum | `"Buy"` / `"Sell"` |
-| `price` | float | 限價單必填；市價單填 0 |
-| `quantity` | int | 口數 |
+| `price` | float | 限價單必填；市價單填 0；Cancel 沿用原價 |
+| `quantity` | int | 口數；Cancel 固定 0 |
+| `op_type` | enum | `"New"` / `"Cancel"` / `"UpdatePrice"` / `"UpdateQty"`（CONTEXT.md：canonical 四值）|
 | `price_type` | enum | `"LMT"` / `"MKT"` / `"MKP"` |
 | `order_type` | enum | `"ROD"` / `"IOC"` / `"FOK"`（市價單必須 IOC 或 FOK） |
 | `octype` | enum | `"Auto"` / `"New"` / `"Cover"` / `"DayTrade"`，見下方註 |

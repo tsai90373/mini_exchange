@@ -10,13 +10,16 @@
 
 class IStrategy;  // TODO: 定義介面（on_tick / on_fill ...）
 
-// 一筆下單需求。Caller 不填 id_；Engine.SendNew 內部會分配。
+// PriceType / OrderType / OCType / Account / OpType 已搬到 Types.hpp。
 struct Request {
-    Symbol   symb = {};
-    Side     side = Side::kBuy;
-    Price    pri  = 0;
-    Qty      qty  = 0;
-    // TODO: order_type / price_type / octype ...（對齊 wire_format.md § 4）
+    Symbol    symb = {};
+    Side      side = Side::kBuy;
+    Price     pri  = 0;
+    Qty       qty  = 0;
+    PriceType price_type = PriceType::LMT;
+    OrderType order_type = OrderType::ROD;
+    OCType    octype     = OCType::Auto;
+    Account   account    = Account::FutOpt;
 };
 
 // Core：協調者。職責：策略註冊、風控、下單流程、client_order_id → Order 索引。

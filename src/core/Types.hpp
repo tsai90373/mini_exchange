@@ -30,3 +30,23 @@ enum class OrdSt {
     PARTIAL_FILLED = 2,
     FULL_FILLED = 3,
 };
+
+// 操作類型 — Request 對 Order 做什麼。Cross-cutting：outbound 端
+// (Engine.SendNew/SendChg → OrderRaw.op_type_) 與 inbound 端
+// (OrderAckEvent.op_type from broker) 共用同一套詞彙。
+//
+// Unknown 兼作 sentinel：「這筆 commit 不是 strategy 發起的 request」 —
+// 也就是 OnOrderAck / OnFill 處理 broker callback 時寫進 Backend 的 raw，
+// 預設留 Unknown。PythonOrderAdapter 依此跳過，避免把 ack/fill 觸發的 commit
+// 當成新請求重新送出去。
+enum class OpType : uint8_t { New, Cancel, UpdatePrice, UpdateQty, Unknown };
+
+// 下單條件（wire spec § 4）。命名 mirror Shioaji vocabulary：
+//   PriceType = FuturesPriceType (LMT/MKT/MKP)
+//   OrderType = OrderType (ROD/IOC/FOK)
+//   OCType    = FuturesOCType (Auto/New/Cover/DayTrade)
+//   Account   = Account 分類 (Stock/FutOpt)
+enum class PriceType : uint8_t { LMT, MKT, MKP, Unknown };
+enum class OrderType : uint8_t { ROD, IOC, FOK, Unknown };
+enum class OCType    : uint8_t { Auto, New, Cover, DayTrade, Unknown };
+enum class Account   : uint8_t { Stock, FutOpt, Unknown };

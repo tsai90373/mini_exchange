@@ -9,6 +9,10 @@ OrderRaw* Backend::Begin(Order& order) {
         history_.emplace_back(*order.Tail());
         // rxsno_ 屬於每筆 raw 自己，不該繼承
         history_.back().rxsno_ = 0;
+        // op_type_ 描述「這筆 commit 是什麼操作」，每次都不同；繼承會讓
+        // PythonOrderAdapter 把 ack/fill 觸發的 commit 誤認成新請求重發。
+        // caller (SendChg / OnOrderAck / OnFill) 必須顯式 set。
+        history_.back().op_type_ = OpType::Unknown;
     }
     return &history_.back();
 }
