@@ -76,6 +76,7 @@ add_executable(bridge_demo
     src/core/Engine.cpp
     src/core/Backend.cpp
     src/core/Order.cpp
+    src/adapter/FileLogSubscriber.cpp
     src/adapter/PythonFeedAdapter.cpp
     src/adapter/PythonOrderAdapter.cpp
     src/core/InboundEvents.hpp)
@@ -101,6 +102,17 @@ add_executable(order_lifecycle_smoke
     src/core/Backend.cpp
     src/core/Order.cpp)
 target_include_directories(order_lifecycle_smoke PRIVATE src)
+
+# Smoke test for FileLogSubscriber — full lifecycle through Engine, then reads
+# the jsonl back from disk and verifies every line.
+add_executable(logwriter_smoke
+    tests/logwriter_smoke.cc
+    src/core/Engine.cpp
+    src/core/Backend.cpp
+    src/core/Order.cpp
+    src/adapter/FileLogSubscriber.cpp)
+target_link_libraries(logwriter_smoke PRIVATE nlohmann_json::nlohmann_json)
+target_include_directories(logwriter_smoke PRIVATE src)
 
 # Smoke test for PythonOrderAdapter — no ZMQ link, drives Engine.SendNew/SendChg
 # with a recording lambda and inspects the JSON envelopes.

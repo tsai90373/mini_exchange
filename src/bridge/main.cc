@@ -3,6 +3,7 @@
 
 #include <zmq.hpp>
 
+#include "adapter/FileLogSubscriber.hpp"
 #include "adapter/PythonFeedAdapter.hpp"
 #include "adapter/PythonOrderAdapter.hpp"
 #include "core/Backend.hpp"
@@ -12,6 +13,7 @@ namespace {
 
 constexpr const char* kInboundEndpoint  = "tcp://*:5555";
 constexpr const char* kOutboundEndpoint = "tcp://localhost:5556";
+constexpr const char* kLogDir           = "logs";
 
 }  // namespace
 
@@ -27,6 +29,9 @@ int main() {
     // Subscriber 必須在 Engine 之前構造，逆序解構時 Engine 先死、Subscriber 後死。
     // 見 Subscriber.hpp 的 lifetime contract。
     Backend backend;
+    // 註冊順序即觸發順序：先落地 audit 紀錄，再對外送單（journal-then-send）。
+    FileLogSubscriber log_writer(kLogDir);
+    backend.Subscribe(&log_writer);
     PythonOrderAdapter order_adapter([&outbound](std::string_view payload) {
         outbound.send(zmq::buffer(payload), zmq::send_flags::dontwait);
     });
@@ -51,6 +56,7 @@ int main() {
               << " outbound_msgs=" << order_adapter.MsgCount()
               << " outbound_skipped=" << order_adapter.SkippedCount()
               << " outbound_errs=" << order_adapter.SendErrorCount()
+              << " log_lines=" << log_writer.LineCount()
               << '\n';
     return 0;
 }

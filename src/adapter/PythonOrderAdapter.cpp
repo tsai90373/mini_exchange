@@ -6,68 +6,13 @@
 
 #include <nlohmann/json.hpp>
 
+#include "core/EnumStrings.hpp"
 #include "core/Order.hpp"
 #include "core/Types.hpp"
 
 using nlohmann::json;
 
 namespace {
-
-const char* ToString(Side s) {
-    return s == Side::kSell ? "Sell" : "Buy";
-}
-
-const char* ToString(OpType o) {
-    switch (o) {
-        case OpType::New:         return "New";
-        case OpType::Cancel:      return "Cancel";
-        case OpType::UpdatePrice: return "UpdatePrice";
-        case OpType::UpdateQty:   return "UpdateQty";
-        case OpType::Unknown:     return "Unknown";
-    }
-    return "Unknown";
-}
-
-const char* ToString(PriceType p) {
-    switch (p) {
-        case PriceType::LMT:     return "LMT";
-        case PriceType::MKT:     return "MKT";
-        case PriceType::MKP:     return "MKP";
-        case PriceType::Unknown: return "Unknown";
-    }
-    return "Unknown";
-}
-
-const char* ToString(OrderType o) {
-    switch (o) {
-        case OrderType::ROD:     return "ROD";
-        case OrderType::IOC:     return "IOC";
-        case OrderType::FOK:     return "FOK";
-        case OrderType::Unknown: return "Unknown";
-    }
-    return "Unknown";
-}
-
-const char* ToString(OCType o) {
-    switch (o) {
-        case OCType::Auto:     return "Auto";
-        case OCType::New:      return "New";
-        case OCType::Cover:    return "Cover";
-        case OCType::DayTrade: return "DayTrade";
-        case OCType::Unknown:  return "Unknown";
-    }
-    return "Unknown";
-}
-
-// wire_format.md § 4：account 走小寫，對齊 Shioaji 序列化字串。
-const char* ToString(Account a) {
-    switch (a) {
-        case Account::Stock:   return "stock";
-        case Account::FutOpt:  return "futopt";
-        case Account::Unknown: return "Unknown";
-    }
-    return "Unknown";
-}
 
 uint64_t NowNs() {
     using namespace std::chrono;

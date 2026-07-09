@@ -1,5 +1,6 @@
 build
 build-asan
+logs
 docs
 .claude
 .vscode
