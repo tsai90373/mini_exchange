@@ -66,7 +66,7 @@ constexpr const char* kOrderAckJson = R"({
   "seq_num": 3,
   "ts_ns": 1715769600300000000,
   "data": {
-    "client_order_id": "tickengine-0001",
+    "client_order_id": "1",
     "broker_order_id": "de616839",
     "op_type": "New",
     "op_code": "00",
@@ -81,7 +81,7 @@ constexpr const char* kFillJson = R"({
   "seq_num": 4,
   "ts_ns": 1715769600400000000,
   "data": {
-    "client_order_id": "tickengine-0001",
+    "client_order_id": "1",
     "broker_order_id": "de616839",
     "exchange_seq": "987654",
     "code": "TXFE5",
@@ -134,6 +134,15 @@ int main() {
     Engine            engine(backend);
     PythonFeedAdapter adapter(engine);
 
+    // ack/fill fixtures 指向 cid "1" — 先 SendNew 把這個 Order 生出來，
+    // 否則 Engine 的狀態機對 unknown cid 會 fail-fast（ADR-0001）。
+    Request req;
+    req.symb = "TXFE5";
+    req.side = Side::kBuy;
+    req.pri  = 21500.0;
+    req.qty  = 1;
+    assert(engine.SendNew(req));  // cid 1
+
     // --- Happy path: 5 valid msg_types ---
     adapter.OnBytes(kTickJson);
     adapter.OnBytes(kBidAskJson);
@@ -144,6 +153,10 @@ int main() {
     assert(adapter.MsgCount()        == 5);
     assert(adapter.ParseErrorCount() == 0);
     assert(!engine.ShouldStop());  // Heartbeat does NOT stop
+
+    // 狀態機串接驗證：SendNew + ack + fill = 3 raws，qty 1 全部成交
+    assert(backend.HistorySize() == 3);
+    assert(backend.GetBySno(3)->ord_st_ == OrdSt::FULL_FILLED);
 
     // --- Sad path: broken JSON + unknown msg_type ---
     adapter.OnBytes(kBrokenJson);

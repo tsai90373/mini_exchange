@@ -58,6 +58,17 @@ private:
     bool    RiskCheck(const Request& req);
     ClOrdId AllocateClOrdId();
 
+    // Wire 上的 client_order_id 字串 → orders_ 裡的 Order。
+    // 解析失敗或查無此單 → ADR-0001 fail-fast：log + set stop_requested_，
+    // 回傳 nullptr（安全處理 unknown id 要等 Phase 6 reconciliation）。
+    Order* LookupOrder(const std::string& wire_cid);
+
+    // 終態：不再接受任何狀態轉移，遲到的 ack 只留 audit 紀錄。
+    static bool IsTerminal(OrdSt st) {
+        return st == OrdSt::FAILED || st == OrdSt::CANCELLED ||
+               st == OrdSt::FULL_FILLED;
+    }
+
     Backend& backend_;
 
     // 命名修正（CONTEXT.md L59 已標註的舊命名 total_req_ 棄用）：

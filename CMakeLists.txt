@@ -93,6 +93,15 @@ add_executable(adapter_smoke
 target_link_libraries(adapter_smoke PRIVATE nlohmann_json::nlohmann_json)
 target_include_directories(adapter_smoke PRIVATE src)
 
+# Smoke test for the order state machine (Engine::OnOrderAck / OnFill) —
+# core only, no adapters, no JSON. Asserts OrderRaw chains via Backend::GetBySno.
+add_executable(order_lifecycle_smoke
+    tests/order_lifecycle_smoke.cc
+    src/core/Engine.cpp
+    src/core/Backend.cpp
+    src/core/Order.cpp)
+target_include_directories(order_lifecycle_smoke PRIVATE src)
+
 # Smoke test for PythonOrderAdapter — no ZMQ link, drives Engine.SendNew/SendChg
 # with a recording lambda and inspects the JSON envelopes.
 add_executable(order_adapter_smoke
